@@ -1,0 +1,55 @@
+version: '3.8'
+
+# Universal Telegram Mini App (TMA) E-Commerce — Senior DevOps Production Compose
+# Services: web (Next.js App Router) & db (PostgreSQL 15 with Data Persistence)
+
+services:
+  # 🌐 Next.js Application Service
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tma_ecommerce_web
+    restart: always
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=postgresql://tma_user:tma_secure_password_2026@db:5432/tma_ecommerce?schema=public
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - tma_internal_network
+
+  # 🐘 PostgreSQL 15 Database Service
+  db:
+    image: postgres:15-alpine
+    container_name: tma_ecommerce_db
+    restart: always
+    environment:
+      POSTGRES_DB: tma_ecommerce
+      POSTGRES_USER: tma_user
+      POSTGRES_PASSWORD: tma_secure_password_2026
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tma_user -d tma_ecommerce"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tma_internal_network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  tma_internal_network:
+    driver: bridge

@@ -1,0 +1,32 @@
+# Universal Telegram Mini App (TMA) E-Commerce — Docker Ignore Manifest
+
+# Dependencies & Build Artifacts
+node_modules
+.next
+out
+build
+dist
+
+# Version Control & IDE
+.git
+.gitignore
+.vscode
+.idea
+
+# Environment & Local Secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs & Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Documentation & Temporary Scratch Files
+README.md
+docs
+.DS_Store
