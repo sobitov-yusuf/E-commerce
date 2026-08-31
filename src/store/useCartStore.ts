@@ -1,7 +1,6 @@
 'use client';
 
 // Universal Telegram Mini App (TMA) E-Commerce — Zustand Persistent Cart Store
-// Handles Cart Items, Quantities, Promocode Application, and Total Price Calculations
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
@@ -10,13 +9,15 @@ import { Product, ProductVariant, Promocode } from '@/types';
 export interface CartStoreItem {
   product: Product;
   variant?: ProductVariant | null;
+  variantId?: number | null;
+  selectedVariant?: ProductVariant | null;
   quantity: number;
 }
 
 interface CartStore {
   items: CartStoreItem[];
   appliedPromocode: Promocode | null;
-  addItem: (product: Product, variant?: ProductVariant | null, quantity?: number) => void;
+  addItem: (product: any, variant?: any | null, quantity?: number) => void;
   removeItem: (productId: number, variantId?: number | null) => void;
   updateQuantity: (productId: number, quantity: number, variantId?: number | null) => void;
   applyPromocode: (promocode: Promocode) => void;
@@ -25,6 +26,7 @@ interface CartStore {
   getSubtotal: () => number;
   getDiscountAmount: () => number;
   getTotalPrice: (deliveryFee?: number) => number;
+  getTotalCount: () => number;
 }
 
 export const useCartStore = create<CartStore>()(
@@ -35,10 +37,11 @@ export const useCartStore = create<CartStore>()(
 
       addItem: (product, variant = null, quantity = 1) => {
         set((state) => {
+          const vId = variant ? (variant.id || variant) : null;
           const existingIndex = state.items.findIndex(
             (item) =>
               item.product.id === product.id &&
-              (variant ? item.variant?.id === variant.id : !item.variant)
+              (vId ? (item.variant?.id === vId || item.variantId === vId) : (!item.variant && !item.variantId))
           );
 
           if (existingIndex > -1) {
@@ -47,7 +50,16 @@ export const useCartStore = create<CartStore>()(
             return { items: updated };
           } else {
             return {
-              items: [...state.items, { product, variant, quantity }],
+              items: [
+                ...state.items,
+                {
+                  product,
+                  variant,
+                  variantId: vId,
+                  selectedVariant: variant,
+                  quantity,
+                },
+              ],
             };
           }
         });
@@ -58,7 +70,7 @@ export const useCartStore = create<CartStore>()(
           items: state.items.filter((item) => {
             if (item.product.id !== productId) return true;
             if (variantId !== null && variantId !== undefined) {
-              return (item.variant?.id ?? null) !== variantId;
+              return (item.variant?.id ?? item.variantId ?? null) !== variantId;
             }
             return false;
           }),
@@ -74,7 +86,11 @@ export const useCartStore = create<CartStore>()(
         set((state) => ({
           items: state.items.map((item) => {
             if (item.product.id === productId) {
-              if (variantId === null || variantId === undefined || (item.variant?.id ?? null) === variantId) {
+              if (
+                variantId === null ||
+                variantId === undefined ||
+                (item.variant?.id ?? item.variantId ?? null) === variantId
+              ) {
                 return { ...item, quantity };
               }
             }
@@ -98,8 +114,8 @@ export const useCartStore = create<CartStore>()(
       getSubtotal: () => {
         const { items } = get();
         return items.reduce((total, item) => {
-          const unitPrice = item.variant?.price
-            ? Number(item.variant.price)
+          const unitPrice = item.selectedVariant?.price || item.variant?.price
+            ? Number(item.selectedVariant?.price || item.variant?.price)
             : Number(item.product.base_price);
           return total + unitPrice * item.quantity;
         }, 0);
@@ -125,6 +141,11 @@ export const useCartStore = create<CartStore>()(
         const subtotal = get().getSubtotal();
         const discount = get().getDiscountAmount();
         return Math.max(0, subtotal - discount + deliveryFee);
+      },
+
+      getTotalCount: () => {
+        const { items } = get();
+        return items.reduce((count, item) => count + item.quantity, 0);
       },
     }),
     {

@@ -1,184 +1,86 @@
-// Universal Telegram Mini App (TMA) E-Commerce — Admin Products & Categories CRUD API
-// Supports Multilingual JSONB (UZ, RU, EN), SKU Product Variants, Badges, and GIN Index Updating
-
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { sanitizeInput, safeParseInt, safeParseFloat } from '@/lib/sanitize';
 
-export const dynamic = 'force-dynamic';
-
-export async function GET(request: NextRequest) {
+// GET /api/admin/products
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url);
-    const categoryId = searchParams.get('category_id') ? safeParseInt(searchParams.get('category_id')) : undefined;
-
-    const where: any = {};
-    if (categoryId && categoryId > 0) {
-      where.category_id = categoryId;
-    }
-
-    const [products, categories] = await Promise.all([
-      prisma.product.findMany({
-        where,
-        orderBy: { created_at: 'desc' },
-        include: {
-          category: true,
-          variants: true,
-        },
-      }),
-      prisma.category.findMany({
-        orderBy: { id: 'asc' },
-      }),
-    ]);
-
-    const formattedProducts = products.map((p) => ({
-      ...p,
-      base_price: Number(p.base_price),
-      old_price: p.old_price ? Number(p.old_price) : null,
-      variants: p.variants.map((v) => ({
-        ...v,
-        price: v.price ? Number(v.price) : null,
-      })),
-    }));
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        products: formattedProducts,
-        categories,
+    const products = await prisma.product.findMany({
+      include: {
+        category: true,
+        variants: true,
+        reviews: true,
       },
+      orderBy: { created_at: 'desc' },
     });
+
+    return NextResponse.json({ success: true, data: products });
   } catch (error: any) {
-    console.error('Admin Products GET Error:', error);
-    return NextResponse.json({ success: false, error: 'Server ichki xatosi' }, { status: 500 });
+    console.error('Error fetching admin products:', error);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
 
-export async function POST(request: NextRequest) {
+// POST /api/admin/products
+export async function POST(req: NextRequest) {
   try {
-    const body = await request.json();
-    
-    const name = {
-      uz: sanitizeInput(body.name?.uz),
-      ru: sanitizeInput(body.name?.ru),
-      en: sanitizeInput(body.name?.en),
-    };
-    const description = {
-      uz: sanitizeInput(body.description?.uz),
-      ru: sanitizeInput(body.description?.ru),
-      en: sanitizeInput(body.description?.en),
-    };
+    const body = await req.json();
+    const { name, description, base_price, old_price, images, category_id, badge, variants } = body;
 
-    const category_id = safeParseInt(body.category_id);
-    const base_price = safeParseFloat(body.base_price);
-    const old_price = body.old_price ? safeParseFloat(body.old_price) : null;
-    const badge = body.badge ? sanitizeInput(body.badge) : 'NEW';
-    const is_active = body.is_active !== false;
-    const images = Array.isArray(body.images) ? body.images.map((img: string) => sanitizeInput(img)) : [];
-    const variants = Array.isArray(body.variants) ? body.variants : [];
-
-    if (!name.uz || !category_id || base_price <= 0) {
+    if (!name || !base_price || !category_id) {
       return NextResponse.json(
-        { success: false, error: 'Mahsulot nomi (UZ), kategoriya va narx majburiy' },
+        { success: false, error: 'Name, base_price and category_id are required' },
         { status: 400 }
       );
     }
 
-    const newProduct = await prisma.product.create({
+    const created = await prisma.product.create({
       data: {
-        category_id,
-        name,
-        description,
-        base_price,
-        old_price,
-        badge: badge as any,
-        is_active,
-        images,
-        variants: {
+        category_id: Number(category_id),
+        name: typeof name === 'object' ? name : { uz: String(name), ru: String(name), en: String(name) },
+        description: typeof description === 'object' ? description : { uz: String(description || ''), ru: String(description || ''), en: String(description || '') },
+        base_price: Number(base_price),
+        old_price: old_price ? Number(old_price) : null,
+        images: Array.isArray(images) ? images : [],
+        badge: badge && ['NEW', 'TOP', 'SALE'].includes(badge) ? badge : 'NONE',
+        is_active: true,
+        variants: variants && Array.isArray(variants) && variants.length > 0 ? {
           create: variants.map((v: any) => ({
-            sku: sanitizeInput(v.sku) || `SKU_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-            size: v.size ? sanitizeInput(v.size) : null,
-            color: v.color ? sanitizeInput(v.color) : null,
-            stock_count: Math.max(0, safeParseInt(v.stock_count, 0)),
-            price: v.price ? safeParseFloat(v.price) : null,
-          })),
-        },
+            size: v.size || null,
+            color: v.color || null,
+            price: v.price ? Number(v.price) : null,
+            stock_count: Number(v.stock_count || v.stock || 0),
+            sku: v.sku || `SKU-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+          }))
+        } : undefined,
       },
-      include: { variants: true, category: true },
+      include: {
+        category: true,
+        variants: true,
+      }
     });
 
-    return NextResponse.json({ success: true, data: newProduct });
+    return NextResponse.json({ success: true, data: created }, { status: 201 });
   } catch (error: any) {
-    console.error('Admin Products POST Error:', error);
-    return NextResponse.json({ success: false, error: 'Mahsulot yaratishda xatolik' }, { status: 500 });
+    console.error('Error creating product in DB:', error);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
 
-export async function PUT(request: NextRequest) {
+// DELETE /api/admin/products
+export async function DELETE(req: NextRequest) {
   try {
-    const body = await request.json();
-    const id = safeParseInt(body.id);
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
 
     if (!id) {
-      return NextResponse.json({ success: false, error: 'Mahsulot ID si majburiy' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Product ID is required' }, { status: 400 });
     }
 
-    const name = {
-      uz: sanitizeInput(body.name?.uz),
-      ru: sanitizeInput(body.name?.ru),
-      en: sanitizeInput(body.name?.en),
-    };
-    const description = {
-      uz: sanitizeInput(body.description?.uz),
-      ru: sanitizeInput(body.description?.ru),
-      en: sanitizeInput(body.description?.en),
-    };
+    await prisma.product.delete({ where: { id: Number(id) } });
 
-    const category_id = safeParseInt(body.category_id);
-    const base_price = safeParseFloat(body.base_price);
-    const old_price = body.old_price ? safeParseFloat(body.old_price) : null;
-    const badge = body.badge ? sanitizeInput(body.badge) : 'NEW';
-    const is_active = body.is_active !== false;
-    const images = Array.isArray(body.images) ? body.images.map((img: string) => sanitizeInput(img)) : [];
-
-    const updatedProduct = await prisma.product.update({
-      where: { id },
-      data: {
-        category_id,
-        name,
-        description,
-        base_price,
-        old_price,
-        badge: badge as any,
-        is_active,
-        images,
-      },
-      include: { variants: true, category: true },
-    });
-
-    return NextResponse.json({ success: true, data: updatedProduct });
+    return NextResponse.json({ success: true, message: 'Product deleted successfully' });
   } catch (error: any) {
-    console.error('Admin Products PUT Error:', error);
-    return NextResponse.json({ success: false, error: 'Mahsulot yangilashda xatolik' }, { status: 500 });
-  }
-}
-
-export async function DELETE(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const id = safeParseInt(searchParams.get('id'));
-
-    if (!id) {
-      return NextResponse.json({ success: false, error: 'Mahsulot ID si majburiy' }, { status: 400 });
-    }
-
-    await prisma.product.delete({
-      where: { id },
-    });
-
-    return NextResponse.json({ success: true, message: 'Mahsulot o\'chirildi' });
-  } catch (error: any) {
-    console.error('Admin Products DELETE Error:', error);
-    return NextResponse.json({ success: false, error: 'Mahsulot o\'chirishda xatolik' }, { status: 500 });
+    console.error('Error deleting product in DB:', error);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }

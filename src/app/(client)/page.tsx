@@ -1,357 +1,242 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Flame, Sparkles, ShoppingBag } from 'lucide-react';
-import { useCartStore } from '@/store/useCartStore';
-import { useWishlistStore } from '@/store/useWishlistStore';
-import { useProductStore, ProductItem } from '@/store/useProductStore';
-import { useBannerStore } from '@/store/useBannerStore';
+import { Sparkles, ShoppingBag, ArrowRight, ShieldCheck, Truck, RotateCcw, PackageSearch } from 'lucide-react';
+import { useProductStore } from '@/store/useProductStore';
 import { useCategoryStore } from '@/store/useCategoryStore';
+import { useBannerStore } from '@/store/useBannerStore';
 import { useLanguageStore } from '@/store/useLanguageStore';
-import { StoryItem } from '@/types';
-
-import { StoriesReel } from '@/components/home/StoriesReel';
-import { HeroBannerSlider } from '@/components/home/HeroBannerSlider';
-import { CategoryCarousel } from '@/components/home/CategoryCarousel';
 import { ProductCard } from '@/components/home/ProductCard';
-import { TelegramSupportCTA } from '@/components/home/TelegramSupportCTA';
-import { TrustBadges } from '@/components/home/TrustBadges';
-import { ProductDrawer } from '@/components/telegram/ProductDrawer';
-import { StoriesModal } from '@/components/telegram/StoriesModal';
-import { useRouter } from 'next/navigation';
 
 export default function HomePage() {
-  const router = useRouter();
   const { lang, t } = useLanguageStore();
-  const [activeCategoryFilter, setActiveCategoryFilter] = useState<number | null>(null);
-  const [activeFilterTab, setActiveFilterTab] = useState<'all' | 'top' | 'new'>('all');
-  const [activeDrawerProductId, setActiveDrawerProductId] = useState<number | null>(null);
-  const [activeStoryIndex, setActiveStoryIndex] = useState<number | null>(null);
+  const { products, isLoading: isProductsLoading, fetchProducts } = useProductStore();
+  const { categories, fetchCategories } = useCategoryStore();
+  const { banners, fetchBanners } = useBannerStore();
 
-  const { banners } = useBannerStore();
-  const { categories } = useCategoryStore();
-  const { products, fetchProducts } = useProductStore();
-  const { items: cartItems, addItem: addItemToCart, updateQuantity: updateCartQuantity, removeItem: removeItemFromCart } = useCartStore();
-  const { toggleWishlist, isWishlisted } = useWishlistStore();
-
-  const storiesList: StoryItem[] = [
-    {
-      id: 1,
-      title: {
-        uz: 'Kuzgi Eksklyuziv Kolleksiya — 30% Chegirma',
-        ru: 'Эксклюзивная Осенняя Коллекция — Скидка 30%',
-        en: 'Exclusive Autumn Collection — 30% Discount',
-      },
-      subtitle: {
-        uz: 'Cheklangan Taklif',
-        ru: 'Ограниченное Предложение',
-        en: 'Limited Time Offer',
-      },
-      tag: {
-        uz: '🔥 AKSIYA',
-        ru: '🔥 АКЦИЯ',
-        en: '🔥 PROMO',
-      },
-      image: 'https://images.unsplash.com/photo-1544441893-675973e31985?w=800',
-      bgColor: 'from-gray-900 to-gray-800',
-      linkText: {
-        uz: 'Kolleksiyaga oʻtish',
-        ru: 'Перейти к коллекции',
-        en: 'View Collection',
-      },
-      linkUrl: '/catalog',
-    },
-    {
-      id: 2,
-      title: {
-        uz: 'Fransuz Parfyumeriyasi — Yangi Nafis Iforlar',
-        ru: 'Французская Парфюмерия — Изысканные Ароматы',
-        en: 'French Perfumery — Exquisite Fragrances',
-      },
-      subtitle: {
-        uz: 'Luxe Parfum',
-        ru: 'Luxe Parfum',
-        en: 'Luxe Parfum',
-      },
-      tag: {
-        uz: '✨ YANGI',
-        ru: '✨ НОВИНКА',
-        en: '✨ NEW',
-      },
-      image: 'https://images.unsplash.com/photo-1541643600914-78b084683601?w=800',
-      bgColor: 'from-gray-900 to-gray-800',
-      linkText: {
-        uz: 'Iforlarni koʻrish',
-        ru: 'Посмотреть ароматы',
-        en: 'View Fragrances',
-      },
-      linkUrl: '/catalog',
-    },
-    {
-      id: 3,
-      title: {
-        uz: 'Klassik Charm Soatlar — Sapfir Oyna Kafolati',
-        ru: 'Классические Кожаные Часы — Сапфировое Стекло',
-        en: 'Classic Leather Watches — Sapphire Glass',
-      },
-      subtitle: {
-        uz: 'Premium Watches',
-        ru: 'Premium Watches',
-        en: 'Premium Watches',
-      },
-      tag: {
-        uz: '👑 TREND',
-        ru: '👑 ТРЕНД',
-        en: '👑 TREND',
-      },
-      image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800',
-      bgColor: 'from-gray-900 to-gray-800',
-      linkText: {
-        uz: 'Soatlarni tanlash',
-        ru: 'Выбрать часы',
-        en: 'Choose Watches',
-      },
-      linkUrl: '/catalog',
-    },
-    {
-      id: 4,
-      title: {
-        uz: 'Sport Krossovkalar — Eng Yengil Amortizatsiya',
-        ru: 'Спортивные Кроссовки — Ультралегкая Амортизация',
-        en: 'Sport Sneakers — Ultra Lightweight Cushioning',
-      },
-      subtitle: {
-        uz: 'Fly Sport',
-        ru: 'Fly Sport',
-        en: 'Fly Sport',
-      },
-      tag: {
-        uz: '⚡ FLASH',
-        ru: '⚡ FLASH',
-        en: '⚡ FLASH',
-      },
-      image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800',
-      bgColor: 'from-gray-900 to-gray-800',
-      linkText: {
-        uz: 'Modellarni koʻrish',
-        ru: 'Посмотреть модели',
-        en: 'View Models',
-      },
-      linkUrl: '/catalog',
-    },
-    {
-      id: 5,
-      title: {
-        uz: 'Zarhal Taqinchoqlar — 585 Probali Oltin Qoplama',
-        ru: 'Ювелирные Украшения — Позолота 585 Пробы',
-        en: 'Gold Jewelry — 585 Gold Plated Edition',
-      },
-      subtitle: {
-        uz: 'Gold Edition',
-        ru: 'Gold Edition',
-        en: 'Gold Edition',
-      },
-      tag: {
-        uz: '💎 LUXE',
-        ru: '💎 LUXE',
-        en: '💎 LUXE',
-      },
-      image: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=800',
-      bgColor: 'from-gray-900 to-gray-800',
-      linkText: {
-        uz: 'Taqinchoqlarni koʻrish',
-        ru: 'Посмотреть украшения',
-        en: 'View Jewelry',
-      },
-      linkUrl: '/catalog',
-    },
-  ];
+  const [activeTab, setActiveTab] = useState<'all' | 'popular' | 'new' | 'sale'>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
   useEffect(() => {
-    fetchProducts(lang, activeCategoryFilter, '');
-  }, [activeCategoryFilter, fetchProducts, lang]);
+    fetchProducts();
+    fetchCategories();
+    fetchBanners();
+  }, [fetchProducts, fetchCategories, fetchBanners]);
 
-  const triggerHaptic = (type: 'light' | 'medium' | 'heavy' = 'light') => {
-    try {
-      if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.HapticFeedback) {
-        (window as any).Telegram.WebApp.HapticFeedback.impactOccurred(type);
-      }
-    } catch (e) {
-      // Fallback
+  const filteredProducts = useMemo(() => {
+    let list = [...(products || [])];
+
+    if (selectedCategory !== 'all') {
+      list = list.filter((p) => String(p.category_id) === String(selectedCategory));
     }
+
+    if (activeTab === 'popular') {
+      list = list.filter((p) => p.badge === 'TOP' || (p.reviewsCount || 0) > 0);
+    } else if (activeTab === 'new') {
+      list = list.filter((p) => p.badge === 'NEW');
+    } else if (activeTab === 'sale') {
+      list = list.filter((p) => p.badge === 'SALE' || (p.old_price && Number(p.old_price) > Number(p.base_price)));
+    }
+
+    return list;
+  }, [products, selectedCategory, activeTab]);
+
+  const activeBanners = useMemo(() => {
+    return (banners || []).filter((b) => b.isActive);
+  }, [banners]);
+
+  const activeCategories = useMemo(() => {
+    return (categories || []).filter((c) => c.isActive);
+  }, [categories]);
+
+  const getCategoryName = (name: any) => {
+    if (typeof name === 'object' && name) return name[lang] || name.uz || '';
+    return String(name || '');
   };
 
-  const handleAddToCart = (product: ProductItem, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    triggerHaptic('medium');
-    const defaultVariant = product.variants && product.variants[0];
-    addItemToCart(product as any, defaultVariant as any, 1);
+  const getBannerText = (val: any) => {
+    if (typeof val === 'object' && val) return val[lang] || val.uz || '';
+    return String(val || '');
   };
-
-  // Base Home Showcase Products (Admin-controlled show_on_home)
-  const homeProducts = products.filter((p) => p.show_on_home !== false);
-
-  // Category-scoped products for tab counters
-  const categoryScopedHome = activeCategoryFilter
-    ? homeProducts.filter((p) => p.category_id === activeCategoryFilter)
-    : homeProducts;
-
-  const categoryScopedAll = activeCategoryFilter
-    ? products.filter((p) => p.category_id === activeCategoryFilter)
-    : products;
-
-  const allCount = categoryScopedHome.length;
-  const popularCount = categoryScopedAll.filter((p) => p.is_popular === true).length;
-  const newCount = categoryScopedAll.filter((p) => p.badge === 'NEW').length;
-
-  let displayedProducts = categoryScopedHome;
-
-  if (activeFilterTab === 'top') {
-    displayedProducts = categoryScopedAll.filter((p) => p.is_popular === true);
-  } else if (activeFilterTab === 'new') {
-    displayedProducts = categoryScopedAll.filter((p) => p.badge === 'NEW');
-  }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Product Drawer Modal */}
-      <ProductDrawer
-        productId={activeDrawerProductId}
-        onClose={() => setActiveDrawerProductId(null)}
-      />
+    <div className="space-y-6 sm:space-y-8 pb-10">
+      {/* 1. HERO BANNER CAROUSEL */}
+      {activeBanners.length > 0 && (
+        <div className="relative rounded-2xl overflow-hidden shadow-xs bg-gray-900">
+          <div className="w-full h-40 sm:h-56 md:h-72 relative">
+            <img
+              src={activeBanners[0].image}
+              alt={getBannerText(activeBanners[0].title)}
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent flex flex-col justify-end p-4 sm:p-6 md:p-8 text-white space-y-1">
+              <h2 className="text-base sm:text-2xl md:text-3xl font-black tracking-tight leading-tight">
+                {getBannerText(activeBanners[0].title)}
+              </h2>
+              {activeBanners[0].subtitle && (
+                <p className="text-xs sm:text-sm text-gray-200 line-clamp-1">
+                  {getBannerText(activeBanners[0].subtitle)}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
-      {/* Full-Screen Instagram-Style Stories Modal */}
-      <StoriesModal
-        stories={storiesList}
-        activeStoryIndex={activeStoryIndex}
-        onClose={() => setActiveStoryIndex(null)}
-        onNavigate={(url) => router.push(url)}
-      />
-
-      {/* 1. Stories Bar (Quick Promo Circles) */}
-      <StoriesReel
-        stories={storiesList}
-        onSelectStory={(story) => {
-          const idx = storiesList.findIndex((s) => s.id === story.id);
-          setActiveStoryIndex(idx >= 0 ? idx : 0);
-        }}
-        triggerHaptic={triggerHaptic}
-      />
-
-      {/* 2. Hero Banner Slider (Pure Clean Clickable Image Slider) */}
-      <HeroBannerSlider
-        banners={banners}
-        triggerHaptic={triggerHaptic}
-      />
-
-      {/* 3. Categories Carousel (Rounded Category Icons with Titles) */}
-      <CategoryCarousel
-        categories={categories}
-        selectedCategoryId={activeCategoryFilter}
-        onSelectCategory={(id) => setActiveCategoryFilter(id)}
-        triggerHaptic={triggerHaptic}
-      />
-
-      {/* 4. Main Product Showcase ("Tavsiya etiladigan mahsulotlar") */}
-      <section className="space-y-2.5">
-        {/* Header & Filter Tabs */}
-        <div className="flex items-center justify-between gap-2 px-0.5">
-          <h2 className="text-sm sm:text-base font-bold text-gray-950 tracking-tight leading-none">
-            {t('home_recommended')}
-          </h2>
-
-          {/* Filter Tabs: Barchasi, Mashhur, Yangi */}
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar select-none shrink-0">
+      {/* 2. CATEGORY CAPSULES CAROUSEL */}
+      {activeCategories.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
             <button
               type="button"
-              onClick={() => {
-                triggerHaptic('light');
-                setActiveFilterTab('all');
-              }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-100 active:scale-95 shrink-0 ${
-                activeFilterTab === 'all'
-                  ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-950 font-bold shadow-xs'
-                  : 'bg-white dark:bg-[#161F30] border border-gray-200/70 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#1F293D]'
+              onClick={() => setSelectedCategory('all')}
+              className={`h-11 sm:h-12 px-4 rounded-2xl font-bold text-xs sm:text-sm shrink-0 flex items-center gap-2 transition-all ${
+                selectedCategory === 'all'
+                  ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-950 shadow-xs'
+                  : 'bg-white dark:bg-[#111827] text-gray-700 dark:text-gray-300 border border-gray-200/80 dark:border-white/10'
               }`}
             >
-              {t('home_all')} ({allCount})
+              <span>{lang === 'uz' ? 'Barchasi' : 'Все'}</span>
             </button>
 
-            <button
-              type="button"
-              onClick={() => {
-                triggerHaptic('light');
-                setActiveFilterTab('top');
-              }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-100 active:scale-95 shrink-0 flex items-center gap-1.5 ${
-                activeFilterTab === 'top'
-                  ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-950 font-bold shadow-xs'
-                  : 'bg-white dark:bg-[#161F30] border border-gray-200/70 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#1F293D]'
-              }`}
-            >
-              <Flame className="w-3.5 h-3.5 stroke-[2]" />
-              <span>{t('home_popular')}</span>
-              <span className="opacity-80">({popularCount})</span>
-            </button>
+            {activeCategories.map((cat) => (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => setSelectedCategory(String(cat.id))}
+                className={`h-11 sm:h-12 px-3.5 sm:px-4 rounded-2xl font-bold text-xs sm:text-sm shrink-0 flex items-center gap-2.5 transition-all ${
+                  String(selectedCategory) === String(cat.id)
+                    ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-950 shadow-xs'
+                    : 'bg-white dark:bg-[#111827] text-gray-700 dark:text-gray-300 border border-gray-200/80 dark:border-white/10'
+                }`}
+              >
+                {cat.image && (
+                  <img
+                    src={cat.image}
+                    alt={getCategoryName(cat.name)}
+                    className="w-6 h-6 rounded-full object-cover shrink-0"
+                  />
+                )}
+                <span>{getCategoryName(cat.name)}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
-            <button
-              type="button"
-              onClick={() => {
-                triggerHaptic('light');
-                setActiveFilterTab('new');
-              }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-100 active:scale-95 shrink-0 flex items-center gap-1.5 ${
-                activeFilterTab === 'new'
-                  ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-950 font-bold shadow-xs'
-                  : 'bg-white dark:bg-[#161F30] border border-gray-200/70 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#1F293D]'
-              }`}
-            >
-              <Sparkles className="w-3.5 h-3.5 stroke-[2]" />
-              <span>{t('home_new')}</span>
-              <span className="opacity-80">({newCount})</span>
-            </button>
+      {/* 3. MAIN PRODUCT SHOWCASE */}
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-200/80 dark:border-white/10 pb-3">
+          <div className="flex items-center gap-2">
+            <h3 className="text-base sm:text-lg font-black text-gray-950 dark:text-white tracking-tight">
+              {lang === 'uz' ? 'Tavsiya etiladigan mahsulotlar' : 'Рекомендуемые товары'}
+            </h3>
+            <span className="text-xs font-bold text-gray-400">({filteredProducts.length})</span>
+          </div>
+
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+            {(['all', 'popular', 'new', 'sale'] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setActiveTab(tab)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                  activeTab === tab
+                    ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-950 shadow-xs'
+                    : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-[#161F30]'
+                }`}
+              >
+                {tab === 'all' && (lang === 'uz' ? 'Barchasi' : 'Все')}
+                {tab === 'popular' && (lang === 'uz' ? 'Mashhur' : 'Популярные')}
+                {tab === 'new' && (lang === 'uz' ? 'Yangi' : 'Новинки')}
+                {tab === 'sale' && (lang === 'uz' ? 'Chegirma' : 'Скидки')}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Product Cards Grid */}
-        {displayedProducts.length === 0 ? (
-          <div className="bg-white border border-gray-200/70 rounded-xl p-12 text-center space-y-2">
-            <ShoppingBag className="w-12 h-12 text-gray-300 mx-auto stroke-[1.5]" />
-            <p className="text-xs sm:text-sm font-medium text-gray-600">{t('home_no_products')}</p>
+        {isProductsLoading ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-4 pt-2">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div
+                key={i}
+                className="bg-white dark:bg-[#111827] rounded-xl border border-gray-200/70 dark:border-white/10 p-3 space-y-3 animate-pulse"
+              >
+                <div className="aspect-square w-full bg-gray-100 dark:bg-[#161F30] rounded-lg" />
+                <div className="h-3 bg-gray-200 dark:bg-[#161F30] rounded w-3/4" />
+                <div className="h-4 bg-gray-300 dark:bg-[#161F30] rounded w-1/2" />
+                <div className="h-8 bg-gray-200 dark:bg-[#161F30] rounded-lg w-full" />
+              </div>
+            ))}
+          </div>
+        ) : filteredProducts.length > 0 ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-4">
+            {filteredProducts.map((product) => (
+              <ProductCard key={product.id} product={product as any} />
+            ))}
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-4.5">
-            {displayedProducts.map((product) => {
-              const isLiked = isWishlisted(product.id);
-              const cartItem = cartItems.find((item) => item.product.id === product.id);
-              const cartQty = cartItem ? cartItem.quantity : 0;
-
-              return (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  isLiked={isLiked}
-                  cartQuantity={cartQty}
-                  onOpenDrawer={(id) => router.push(`/product/${id}`)}
-                  onToggleWishlist={(id) => toggleWishlist(id)}
-                  onAddToCart={(prod, e) => handleAddToCart(prod, e)}
-                  onUpdateQuantity={(id, q) => updateCartQuantity(id, q)}
-                  onRemoveFromCart={(id) => removeItemFromCart(id)}
-                  triggerHaptic={triggerHaptic}
-                />
-              );
-            })}
+          <div className="py-12 sm:py-16 text-center space-y-3 bg-white dark:bg-[#111827] rounded-2xl border border-dashed border-gray-300 dark:border-white/10 p-6">
+            <div className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-[#161F30] text-gray-400 flex items-center justify-center mx-auto">
+              <PackageSearch className="w-6 h-6" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-gray-950 dark:text-white">
+                {lang === 'uz' ? 'Hozircha mahsulotlar mavjud emas' : 'Товары пока не добавлены'}
+              </h4>
+              <p className="text-xs text-gray-400 max-w-sm mx-auto mt-1">
+                {lang === 'uz'
+                  ? 'Admin panel orqali yangi tovarlar, toifalar va narxlarni kiritishingiz mumkin.'
+                  : 'Вы можете добавить новые товары через панель администратора.'}
+              </p>
+            </div>
+            <div className="pt-2">
+              <Link
+                href="/admin"
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-950 font-bold rounded-xl text-xs hover:bg-black dark:hover:bg-gray-100 transition-all shadow-xs"
+              >
+                <span>Admin panelga o'tish</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
           </div>
         )}
-      </section>
+      </div>
 
-      {/* 5. Telegram Support CTA Banner */}
-      <TelegramSupportCTA triggerHaptic={triggerHaptic} />
+      {/* 4. TRUST & WARRANTY BADGES */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-4 pt-4 border-t border-gray-200/80 dark:border-white/10">
+        <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-2 p-3 rounded-xl bg-white dark:bg-[#111827] border border-gray-200/70 dark:border-white/10">
+          <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 flex items-center justify-center shrink-0">
+            <ShieldCheck className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="text-[11px] sm:text-xs font-bold text-gray-900 dark:text-white">100% Original</div>
+            <div className="text-[9px] sm:text-[10px] text-gray-400 hidden sm:block">Kafolatlangan sifat</div>
+          </div>
+        </div>
 
-      {/* 6. Trust & Warranty Badges (Original, Fast delivery, Easy return) */}
-      <TrustBadges />
+        <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-2 p-3 rounded-xl bg-white dark:bg-[#111827] border border-gray-200/70 dark:border-white/10">
+          <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-600 flex items-center justify-center shrink-0">
+            <Truck className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="text-[11px] sm:text-xs font-bold text-gray-900 dark:text-white">Tezkor Yetkazish</div>
+            <div className="text-[9px] sm:text-[10px] text-gray-400 hidden sm:block">1 kun ichida</div>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-2 p-3 rounded-xl bg-white dark:bg-[#111827] border border-gray-200/70 dark:border-white/10">
+          <div className="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-950/50 text-purple-600 flex items-center justify-center shrink-0">
+            <RotateCcw className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="text-[11px] sm:text-xs font-bold text-gray-900 dark:text-white">Oson Qaytarish</div>
+            <div className="text-[9px] sm:text-[10px] text-gray-400 hidden sm:block">10 kun muddat</div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

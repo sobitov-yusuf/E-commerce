@@ -2,9 +2,12 @@ import { create } from 'zustand';
 import { LanguageCode } from '@/types';
 import { translations, TranslationKey } from '@/locales/translations';
 
+export type { LanguageCode };
+
 interface LanguageStore {
   lang: LanguageCode;
   setLang: (lang: LanguageCode) => void;
+  setLanguage: (lang: LanguageCode) => void;
   t: (key: TranslationKey) => string;
 }
 
@@ -19,6 +22,10 @@ export const useLanguageStore = create<LanguageStore>((set, get) => ({
       }
     } catch (e) {}
     set({ lang });
+  },
+
+  setLanguage: (lang: LanguageCode) => {
+    get().setLang(lang);
   },
 
   t: (key: TranslationKey) => {

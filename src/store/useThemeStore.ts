@@ -4,6 +4,7 @@ export type ThemeMode = 'light' | 'dark';
 
 interface ThemeStore {
   theme: ThemeMode;
+  isDark: boolean;
   setTheme: (theme: ThemeMode) => void;
   toggleTheme: () => void;
   initializeTheme: () => void;
@@ -11,6 +12,9 @@ interface ThemeStore {
 
 export const useThemeStore = create<ThemeStore>((set, get) => ({
   theme: 'light',
+  get isDark() {
+    return this.theme === 'dark';
+  },
 
   setTheme: (theme: ThemeMode) => {
     try {
@@ -26,7 +30,7 @@ export const useThemeStore = create<ThemeStore>((set, get) => ({
         }
       }
     } catch (e) {}
-    set({ theme });
+    set({ theme, isDark: theme === 'dark' });
   },
 
   toggleTheme: () => {
@@ -41,7 +45,6 @@ export const useThemeStore = create<ThemeStore>((set, get) => ({
         if (savedTheme === 'dark' || savedTheme === 'light') {
           get().setTheme(savedTheme);
         } else {
-          // Check system or Telegram preference
           const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
           get().setTheme(prefersDark ? 'dark' : 'light');
         }

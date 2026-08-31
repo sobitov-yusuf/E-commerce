@@ -1,196 +1,161 @@
 'use client';
 
 import React from 'react';
-import { Heart, ShoppingBag, Star, Plus, Minus } from 'lucide-react';
+import Link from 'next/link';
+import { ShoppingBag, Plus, Minus, Heart, Star } from 'lucide-react';
 import { ProductItem } from '@/store/useProductStore';
+import { useCartStore } from '@/store/useCartStore';
+import { useWishlistStore } from '@/store/useWishlistStore';
 import { useLanguageStore } from '@/store/useLanguageStore';
 
 interface ProductCardProps {
   product: ProductItem;
-  isLiked: boolean;
-  cartQuantity: number;
-  onOpenDrawer: (productId: number) => void;
-  onToggleWishlist: (productId: number) => void;
-  onAddToCart: (product: ProductItem, e: React.MouseEvent) => void;
-  onUpdateQuantity: (productId: number, quantity: number) => void;
-  onRemoveFromCart: (productId: number) => void;
-  triggerHaptic?: (type?: 'light' | 'medium' | 'heavy') => void;
 }
 
-export function ProductCard({
-  product,
-  isLiked,
-  cartQuantity,
-  onOpenDrawer,
-  onToggleWishlist,
-  onAddToCart,
-  onUpdateQuantity,
-  onRemoveFromCart,
-  triggerHaptic,
-}: ProductCardProps) {
-  const { lang, t } = useLanguageStore();
+export function ProductCard({ product }: ProductCardProps) {
+  const { lang } = useLanguageStore();
+  const { items, addItem, updateQuantity } = useCartStore();
+  const { isInWishlist, toggleWishlist } = useWishlistStore();
 
-  const localizedName =
-    typeof product.name === 'object' && product.name
-      ? (product.name as any)[lang] || product.name.uz
-      : String(product.name || '');
+  const cartItem = items.find((it) => it.product.id === product.id);
+  const quantity = cartItem ? cartItem.quantity : 0;
+  const isWish = isInWishlist(product.id);
 
-  const localizedCategory =
-    typeof product.category?.name === 'object' && product.category.name
-      ? (product.category.name as any)[lang] || product.category.name.uz
-      : product.category?.name || 'PREMIUM';
+  const getTitle = () => {
+    if (typeof product.name === 'object' && product.name) {
+      return product.name[lang] || product.name.uz || '';
+    }
+    return String(product.name || '');
+  };
 
-  const hasDiscount = Boolean(product.old_price && product.old_price > product.base_price);
-  const discountPercent = hasDiscount
-    ? Math.round(((product.old_price! - product.base_price) / product.old_price!) * 100)
-    : 0;
+  const imageSrc =
+    product.images && product.images.length > 0
+      ? product.images[0]
+      : 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400';
+
+  const basePrice = Number(product.base_price);
+  const oldPrice = product.old_price ? Number(product.old_price) : null;
+  const hasDiscount = oldPrice && oldPrice > basePrice;
+  const discountPercent = hasDiscount ? Math.round(((oldPrice - basePrice) / oldPrice) * 100) : 0;
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    addItem(product);
+  };
+
+  const handleIncrease = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    updateQuantity(product.id, quantity + 1);
+  };
+
+  const handleDecrease = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    updateQuantity(product.id, quantity - 1);
+  };
+
+  const handleToggleWish = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleWishlist(product.id);
+  };
 
   return (
-    <div
-      onClick={() => {
-        triggerHaptic?.('light');
-        onOpenDrawer(product.id);
-      }}
-      className="relative group cursor-pointer rounded-xl border border-gray-200/70 shadow-sm bg-white hover:shadow-md hover:-translate-y-0.5 transition-all p-2.5 sm:p-3 flex flex-col justify-between"
-    >
-      <div>
-        {/* Aspect-Square Image Container */}
-        <div className="aspect-square w-full overflow-hidden bg-gray-50 rounded-lg relative mb-2 sm:mb-2.5 border border-gray-100">
+    <div className="group bg-white dark:bg-[#111827] rounded-2xl border border-gray-200/80 dark:border-white/10 overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
+      <Link href={`/product/${product.id}`} className="block">
+        {/* Image Container with Badges & Wishlist */}
+        <div className="aspect-square w-full relative overflow-hidden bg-gray-50 dark:bg-[#161F30]">
           <img
-            src={product.images?.[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500'}
-            alt={localizedName}
-            onError={(e) => {
-              (e.target as HTMLImageElement).src =
-                'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500';
-            }}
-            className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+            src={imageSrc}
+            alt={getTitle()}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />
 
           {/* Badges */}
-          {hasDiscount ? (
-            <div className="absolute top-2 left-2 rounded-md text-[11px] font-semibold px-2 py-0.5 bg-red-50 text-red-600 border border-red-100 uppercase shadow-2xs">
-              -{discountPercent}%
-            </div>
-          ) : (
-            <div className="absolute top-2 left-2 rounded-md text-[11px] font-semibold px-2 py-0.5 bg-gray-900 text-white uppercase shadow-2xs">
-              {product.badge === 'TOP'
-                ? t('badge_top')
-                : product.badge === 'SALE'
-                ? t('badge_sale')
-                : t('badge_new')}
-            </div>
-          )}
+          <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
+            {hasDiscount && (
+              <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-md shadow-xs">
+                -{discountPercent}%
+              </span>
+            )}
+            {product.badge === 'TOP' && (
+              <span className="bg-amber-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-md shadow-xs">
+                TOP
+              </span>
+            )}
+            {product.badge === 'NEW' && (
+              <span className="bg-blue-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-md shadow-xs">
+                NEW
+              </span>
+            )}
+          </div>
 
           {/* Wishlist Button */}
           <button
             type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              triggerHaptic?.('medium');
-              onToggleWishlist(product.id);
-            }}
-            className="absolute top-1 right-1 w-10 h-10 flex items-center justify-center z-10 active:scale-95 transition-transform duration-100"
-            aria-label="Wishlist"
+            onClick={handleToggleWish}
+            className={`absolute top-2 right-2 p-1.5 rounded-full backdrop-blur-md transition-all z-10 ${
+              isWish
+                ? 'bg-red-50 text-red-500 shadow-xs'
+                : 'bg-white/80 dark:bg-black/50 text-gray-600 dark:text-gray-300 hover:text-red-500'
+            }`}
           >
-            <div className="w-8 h-8 rounded-full bg-white/90 border border-gray-200/80 backdrop-blur-md flex items-center justify-center text-gray-400 hover:text-red-500 shadow-xs">
-              <Heart className={`w-4 h-4 ${isLiked ? 'fill-red-500 text-red-500' : ''} stroke-[2.2]`} />
-            </div>
+            <Heart className={`w-3.5 h-3.5 ${isWish ? 'fill-red-500 text-red-500' : ''}`} />
           </button>
         </div>
 
-        {/* Card Typography & Details */}
-        <div className="px-0.5 space-y-1">
-          {/* Category & Rating */}
-          <div className="flex items-center justify-between gap-1">
-            <span className="text-xs uppercase tracking-wider text-gray-400 font-semibold truncate">
-              {localizedCategory}
-            </span>
-            <div className="flex items-center gap-1 text-[11px] font-semibold text-gray-700 shrink-0">
-              <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
-              <span>4.9</span>
+        {/* Product Details */}
+        <div className="p-3 space-y-1.5">
+          <h3 className="text-xs font-semibold text-gray-800 dark:text-gray-100 line-clamp-2 min-h-[32px] leading-tight">
+            {getTitle()}
+          </h3>
+
+          {/* Price Row */}
+          <div>
+            <div className="text-sm font-black text-gray-950 dark:text-white">
+              {basePrice.toLocaleString()} <span className="text-[10px] font-semibold text-gray-400">UZS</span>
             </div>
-          </div>
-
-          {/* Product Name */}
-          <h4 className="text-sm font-medium text-gray-800 line-clamp-2 min-h-[40px] leading-snug">
-            {localizedName}
-          </h4>
-        </div>
-      </div>
-
-      {/* Card Footer: Uzum Market Style Structure (Price row on top, Full-width button below) */}
-      <div className="px-0.5 pt-2 mt-auto space-y-2">
-        {/* Full-width Price Row */}
-        <div className="space-y-0.5">
-          {hasDiscount ? (
-            <span className="text-xs font-normal text-gray-400 line-through leading-none block">
-              {product.old_price!.toLocaleString()} {t('currency')}
-            </span>
-          ) : (
-            <span className="text-xs font-normal text-transparent leading-none block select-none">
-              &nbsp;
-            </span>
-          )}
-          <div className="text-base font-bold text-gray-950 leading-tight">
-            {product.base_price.toLocaleString()}
-            <span className="text-xs font-normal text-gray-500 ml-1">{t('currency')}</span>
+            {hasDiscount && (
+              <div className="text-[10px] text-gray-400 line-through">
+                {oldPrice.toLocaleString()} UZS
+              </div>
+            )}
           </div>
         </div>
+      </Link>
 
-        {/* Bottom Full-Width Action Button (Savatga or Stepper) */}
-        <div>
-          {cartQuantity > 0 ? (
-            <div
-              onClick={(e) => e.stopPropagation()}
-              className="w-full h-9 px-2 rounded-lg bg-gray-900 dark:bg-[#1E293B] text-white flex items-center justify-between shadow-xs border border-transparent dark:border-white/10"
-            >
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  triggerHaptic?.('light');
-                  if (cartQuantity <= 1) {
-                    onRemoveFromCart(product.id);
-                  } else {
-                    onUpdateQuantity(product.id, cartQuantity - 1);
-                  }
-                }}
-                className="w-7 h-7 rounded-md bg-gray-800 dark:bg-[#0F172A] flex items-center justify-center text-gray-200 hover:text-white dark:text-gray-200 dark:hover:text-white hover:bg-gray-700 dark:hover:bg-[#161F30] active:scale-95 transition-transform duration-100 font-bold text-sm"
-                aria-label="Kamaytirish"
-              >
-                <Minus className="w-3.5 h-3.5 stroke-[2.5]" />
-              </button>
-
-              <span className="text-xs font-bold text-white min-w-[20px] text-center">
-                {cartQuantity} {t('pcs')}
-              </span>
-
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  triggerHaptic?.('light');
-                  onAddToCart(product, e);
-                }}
-                className="w-7 h-7 rounded-md bg-gray-800 dark:bg-[#0F172A] flex items-center justify-center text-white hover:bg-gray-700 dark:hover:bg-[#161F30] active:scale-95 transition-transform duration-100 font-bold text-sm"
-                aria-label="Ko'paytirish"
-              >
-                <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-              </button>
-            </div>
-          ) : (
+      {/* Uzum Market Style Full-width Bottom Button */}
+      <div className="p-2.5 pt-0">
+        {quantity === 0 ? (
+          <button
+            type="button"
+            onClick={handleAddToCart}
+            className="w-full h-8 bg-gray-900 dark:bg-white text-white dark:text-gray-950 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 hover:bg-black dark:hover:bg-gray-100 active:scale-95 transition-all shadow-xs"
+          >
+            <ShoppingBag className="w-3.5 h-3.5" />
+            <span>{lang === 'uz' ? 'Savatga' : 'В корзину'}</span>
+          </button>
+        ) : (
+          <div className="w-full h-8 bg-gray-900 dark:bg-white text-white dark:text-gray-950 rounded-xl px-2 flex items-center justify-between font-bold text-xs shadow-xs">
             <button
               type="button"
-              onClick={(e) => onAddToCart(product, e)}
-              className="w-full h-9 rounded-lg bg-gray-900 dark:bg-white text-white dark:text-gray-950 text-xs font-semibold flex items-center justify-center gap-1.5 active:scale-95 transition-transform duration-100 shadow-xs hover:bg-black dark:hover:bg-gray-100"
-              aria-label="Savatga qo'shish"
+              onClick={handleDecrease}
+              className="p-1 hover:opacity-70 transition-opacity"
             >
-              <ShoppingBag className="w-3.5 h-3.5 stroke-[2.2]" />
-              <span>{t('add_to_cart')}</span>
+              <Minus className="w-3.5 h-3.5" />
             </button>
-          )}
-        </div>
+            <span>{quantity} ta</span>
+            <button
+              type="button"
+              onClick={handleIncrease}
+              className="p-1 hover:opacity-70 transition-opacity"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
