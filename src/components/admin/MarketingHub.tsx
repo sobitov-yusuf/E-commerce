@@ -34,11 +34,7 @@ export function MarketingHub({ triggerHaptic, openConfirmDialog }: MarketingHubP
   const [activeTab, setActiveTab] = useState<'banners' | 'promocodes' | 'broadcast'>('banners');
 
   // Promocodes local state
-  const [promos, setPromos] = useState([
-    { id: 1, code: 'SPRING2026', discount: 15, minOrder: 100000, usedCount: 24, maxUsage: 100, isActive: true },
-    { id: 2, code: 'WELCOME10', discount: 10, minOrder: 50000, usedCount: 156, maxUsage: 500, isActive: true },
-    { id: 3, code: 'TMA2026', discount: 20, minOrder: 200000, usedCount: 89, maxUsage: 200, isActive: false },
-  ]);
+  const [promos, setPromos] = useState<any[]>([]);
 
   const [newPromoCode, setNewPromoCode] = useState('');
   const [newPromoDiscount, setNewPromoDiscount] = useState('10');
