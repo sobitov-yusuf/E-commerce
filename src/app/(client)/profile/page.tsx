@@ -34,9 +34,9 @@ import {
   SlidersHorizontal,
   ChevronDown,
   LogIn,
+  PackageSearch,
 } from 'lucide-react';
 import { TelegramLoginModal } from '@/components/auth/TelegramLoginModal';
-
 
 interface OrderItem {
   id: string;
@@ -73,10 +73,8 @@ export default function ProfilePage() {
   // FAQ Accordion
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
 
-  // Addresses
-  const [addresses, setAddresses] = useState<string[]>([
-    'Toshkent sh., Chilonzor tumani, 9-mavze, 14-uy',
-  ]);
+  // Addresses State (Starts Empty 0)
+  const [addresses, setAddresses] = useState<string[]>([]);
   const [showAddAddressInput, setShowAddAddressInput] = useState(false);
   const [newAddressInput, setNewAddressInput] = useState('');
 
@@ -100,7 +98,6 @@ export default function ProfilePage() {
       }
     } catch (e) {}
   }, []);
-
 
   const triggerHaptic = (type: 'light' | 'medium' | 'heavy' = 'light') => {
     try {
@@ -140,12 +137,12 @@ export default function ProfilePage() {
   };
 
   const displayName = tgUser
-    ? `${tgUser.first_name || ''} ${tgUser.last_name || ''}`.trim()
-    : 'Shohrux Fayzullayev';
+    ? `${tgUser.first_name || ''} ${tgUser.last_name || ''}`.trim() || 'Foydalanuvchi'
+    : 'Foydalanuvchi';
 
   const username = tgUser?.username
     ? `@${tgUser.username}`
-    : '+998 (90) 123-45-67';
+    : tgUser?.phone || 'Mijoz';
 
   const storeOrders = useOrderStore((state) => state.orders);
 
@@ -163,8 +160,8 @@ export default function ProfilePage() {
       status: (o.status === 'DELIVERING' || o.status === 'NEW') ? 'DELIVERING' : 'COMPLETED',
       statusText,
       deliveryType: o.deliveryMethod === 'courier' ? 'Kuryer orqali' : 'Topshirish punkti (PVZ)',
-      address: o.location || 'Toshkent sh., Yunusobod',
-      paymentMethod: 'Payme / Click',
+      address: o.location || 'Yetkazib berish manzili',
+      paymentMethod: o.paymentType || 'Payme / Click',
       products: o.items && o.items.length > 0 ? o.items.map((i) => ({
         name: i.name,
         image: i.image,
@@ -186,6 +183,9 @@ export default function ProfilePage() {
     if (activeOrderTab === 'completed') return order.status === 'COMPLETED';
     return true;
   });
+
+  const deliveringOrdersCount = orders.filter((o) => o.status === 'DELIVERING').length;
+  const completedOrdersCount = orders.filter((o) => o.status === 'COMPLETED').length;
 
   const faqs = [
     {
@@ -231,9 +231,9 @@ export default function ProfilePage() {
         en: "How do I use cashback and promo codes?",
       },
       a: {
-        uz: "Har bir xaridingizdan 3% keshbek to'planadi. Savat bo'limida navbatdagi xaridlaringiz uchun to'liq chegirma sifatida qo'llashingiz mumkin.",
-        ru: "С каждой покупки начисляется 3% кэшбэка. Вы можете применить его как скидку в корзине при следующих покупках.",
-        en: "You earn 3% cashback on every purchase. You can apply it as a full discount in your cart on future orders.",
+        uz: "Har bir xaridingizdan keshbek to'planadi. Savat bo'limida navbatdagi xaridlaringiz uchun to'liq chegirma sifatida qo'llashingiz mumkin.",
+        ru: "С каждой покупки начисляется кэшбэк. Вы можете применить его как скидку в корзине при следующих покупках.",
+        en: "You earn cashback on purchases. You can apply it as a full discount in your cart on future orders.",
       },
     },
   ];
@@ -298,7 +298,7 @@ export default function ProfilePage() {
             className="p-2 rounded-xl bg-gray-50/90 dark:bg-[#161F30] hover:bg-gray-100/90 dark:hover:bg-[#1F293D] active:scale-95 transition-all"
           >
             <span className="text-[10px] text-gray-400 dark:text-gray-400 font-medium block">{t('profile_cashback')}</span>
-            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">45k {t('currency')}</span>
+            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">0 {t('currency')}</span>
           </button>
         </div>
       </div>
@@ -351,7 +351,7 @@ export default function ProfilePage() {
           </div>
           <div className="flex items-center gap-1.5 text-gray-400">
             <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-md">
-              45,000 {t('currency')}
+              0 {t('currency')}
             </span>
             <ChevronRight className="w-4 h-4" />
           </div>
@@ -552,7 +552,6 @@ export default function ProfilePage() {
         onSuccess={() => setShowWebAuthModal(false)}
       />
 
-
       {/* ========================================================= */}
       {/* SEPARATE STANDALONE MODAL WINDOWS (ALOHIDA OYNALAR) */}
       {/* ========================================================= */}
@@ -579,8 +578,8 @@ export default function ProfilePage() {
             <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0 select-none pb-1">
               {[
                 { id: 'all', label: `${t('profile_modal_orders_all')} (${orders.length})` },
-                { id: 'delivering', label: `${t('profile_modal_orders_delivering')} (1)` },
-                { id: 'completed', label: `${t('profile_modal_orders_completed')} (1)` },
+                { id: 'delivering', label: `${t('profile_modal_orders_delivering')} (${deliveringOrdersCount})` },
+                { id: 'completed', label: `${t('profile_modal_orders_completed')} (${completedOrdersCount})` },
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -602,45 +601,54 @@ export default function ProfilePage() {
 
             {/* Orders list */}
             <div className="space-y-2.5 overflow-y-auto no-scrollbar flex-1 pr-0.5">
-              {filteredOrders.map((order) => (
-                <div
-                  key={order.id}
-                  onClick={() => {
-                    triggerHaptic('medium');
-                    setSelectedOrderDetails(order);
-                  }}
-                  className="p-3 rounded-xl border border-gray-200/80 dark:border-white/10 bg-gray-50 dark:bg-[#161F30] hover:bg-gray-100/70 dark:hover:bg-[#1F293D] active:scale-[0.99] transition-all cursor-pointer space-y-2"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-gray-950 dark:text-white">{order.id}</span>
-                      <span className="text-[10px] text-gray-400">{order.date}</span>
+              {filteredOrders.length > 0 ? (
+                filteredOrders.map((order) => (
+                  <div
+                    key={order.id}
+                    onClick={() => {
+                      triggerHaptic('medium');
+                      setSelectedOrderDetails(order);
+                    }}
+                    className="p-3 rounded-xl border border-gray-200/80 dark:border-white/10 bg-gray-50 dark:bg-[#161F30] hover:bg-gray-100/70 dark:hover:bg-[#1F293D] active:scale-[0.99] transition-all cursor-pointer space-y-2"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-gray-950 dark:text-white">{order.id}</span>
+                        <span className="text-[10px] text-gray-400">{order.date}</span>
+                      </div>
+
+                      {order.status === 'DELIVERING' ? (
+                        <span className="px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800/40 text-[10px] font-semibold flex items-center gap-1">
+                          <Truck className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                          <span>{order.statusText}</span>
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/40 text-[10px] font-semibold flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                          <span>{order.statusText}</span>
+                        </span>
+                      )}
                     </div>
 
-                    {order.status === 'DELIVERING' ? (
-                      <span className="px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800/40 text-[10px] font-semibold flex items-center gap-1">
-                        <Truck className="w-3 h-3 text-amber-600 dark:text-amber-400" />
-                        <span>{order.statusText}</span>
-                      </span>
-                    ) : (
-                      <span className="px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/40 text-[10px] font-semibold flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                        <span>{order.statusText}</span>
-                      </span>
-                    )}
+                    <div className="flex items-center justify-between pt-1 border-t border-gray-200/60 dark:border-white/5">
+                      <div className="flex items-center gap-2">
+                        <img src={order.products[0].image} alt="" className="w-8 h-8 rounded-md object-cover bg-white dark:bg-gray-800" />
+                        <span className="text-xs text-gray-700 dark:text-gray-300 font-medium truncate max-w-[140px]">
+                          {order.products[0].name}
+                        </span>
+                      </div>
+                      <span className="text-xs font-bold text-gray-950 dark:text-white">{order.total.toLocaleString()} {t('currency')}</span>
+                    </div>
                   </div>
-
-                  <div className="flex items-center justify-between pt-1 border-t border-gray-200/60 dark:border-white/5">
-                    <div className="flex items-center gap-2">
-                      <img src={order.products[0].image} alt="" className="w-8 h-8 rounded-md object-cover bg-white dark:bg-gray-800" />
-                      <span className="text-xs text-gray-700 dark:text-gray-300 font-medium truncate max-w-[140px]">
-                        {order.products[0].name}
-                      </span>
-                    </div>
-                    <span className="text-xs font-bold text-gray-950 dark:text-white">{order.total.toLocaleString()} {t('currency')}</span>
+                ))
+              ) : (
+                <div className="py-10 text-center space-y-2">
+                  <PackageSearch className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto" />
+                  <div className="text-xs font-semibold text-gray-400">
+                    {lang === 'uz' ? 'Hozircha buyurtmalar mavjud emas' : 'Заказов пока нет'}
                   </div>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>
@@ -668,7 +676,7 @@ export default function ProfilePage() {
             <div className="p-4 rounded-xl bg-emerald-500/10 dark:bg-emerald-950/50 border border-emerald-200/80 dark:border-emerald-800/50 space-y-1">
               <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">{t('profile_modal_wallet_balance')}</span>
               <div className="text-2xl font-black text-gray-950 dark:text-white">
-                45,000 <span className="text-sm font-normal text-gray-600 dark:text-gray-400">{t('currency')}</span>
+                0 <span className="text-sm font-normal text-gray-600 dark:text-gray-400">{t('currency')}</span>
               </div>
               <p className="text-[11px] text-emerald-800 dark:text-emerald-300 font-normal leading-relaxed pt-1">
                 {t('profile_modal_wallet_info')}
@@ -678,37 +686,9 @@ export default function ProfilePage() {
             {/* Promo Codes */}
             <div className="space-y-2 pt-1">
               <label className="text-xs font-bold text-gray-950 dark:text-white block">{t('profile_modal_wallet_coupons')}</label>
-              {[
-                { code: 'TMA2026', desc: "10% discount promo" },
-                { code: 'YANGI20', desc: "20,000 UZS voucher" },
-              ].map((promo) => (
-                <div
-                  key={promo.code}
-                  className="flex items-center justify-between p-2.5 rounded-xl bg-gray-50 dark:bg-[#161F30] border border-gray-200/80 dark:border-white/10"
-                >
-                  <div>
-                    <div className="text-xs font-bold text-gray-950 dark:text-white font-mono">{promo.code}</div>
-                    <div className="text-[10px] text-gray-500 dark:text-gray-400">{promo.desc}</div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleCopyPromo(promo.code)}
-                    className="p-1.5 rounded-md bg-white dark:bg-[#1F293D] border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-200 hover:text-gray-950 dark:hover:text-white active:scale-90 transition-transform flex items-center gap-1 text-[11px] font-semibold"
-                  >
-                    {copiedCode === promo.code ? (
-                      <>
-                        <Check className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                        <span className="text-emerald-600 dark:text-emerald-400">{t('copied')}</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3 h-3 text-gray-500 dark:text-gray-400" />
-                        <span>{t('copy')}</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              ))}
+              <div className="p-3 text-center rounded-xl bg-gray-50 dark:bg-[#161F30] border border-gray-200/80 dark:border-white/10 text-xs text-gray-400">
+                {lang === 'uz' ? 'Hozircha faol promokodlar mavjud emas' : 'Активных промокодов пока нет'}
+              </div>
             </div>
 
             <Link
@@ -747,17 +727,23 @@ export default function ProfilePage() {
             </div>
 
             <div className="space-y-2">
-              {addresses.map((addr, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-[#161F30] border border-gray-200 dark:border-white/10 text-xs"
-                >
-                  <span className="font-medium text-gray-900 dark:text-white">{addr}</span>
-                  <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/40 px-2 py-0.5 rounded-md shrink-0">
-                    {t('profile_address_main')}
-                  </span>
+              {addresses.length > 0 ? (
+                addresses.map((addr, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-[#161F30] border border-gray-200 dark:border-white/10 text-xs"
+                  >
+                    <span className="font-medium text-gray-900 dark:text-white">{addr}</span>
+                    <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/40 px-2 py-0.5 rounded-md shrink-0">
+                      {t('profile_address_main')}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <div className="p-3 text-center rounded-xl bg-gray-50 dark:bg-[#161F30] border border-gray-200/80 dark:border-white/10 text-xs text-gray-400">
+                  {lang === 'uz' ? 'Saqlangan manzillar mavjud emas' : 'Нет сохраненных адресов'}
                 </div>
-              ))}
+              )}
             </div>
 
             {showAddAddressInput ? (
@@ -804,16 +790,16 @@ export default function ProfilePage() {
       {/* MODAL 4: LANGUAGE SELECTION */}
       {activeModal === 'language' && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
-          <div className="bg-white w-full max-w-md rounded-t-2xl sm:rounded-2xl p-5 space-y-4 border border-gray-200 shadow-2xl animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+          <div className="bg-white dark:bg-[#111827] w-full max-w-md rounded-t-2xl sm:rounded-2xl p-5 space-y-4 border border-gray-200 dark:border-white/10 shadow-2xl animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/10 pb-3">
               <div className="flex items-center gap-2">
-                <Globe className="w-4 h-4 text-gray-900" />
-                <h3 className="text-sm font-bold text-gray-950">{t('profile_modal_lang_title')}</h3>
+                <Globe className="w-4 h-4 text-gray-900 dark:text-white" />
+                <h3 className="text-sm font-bold text-gray-950 dark:text-white">{t('profile_modal_lang_title')}</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setActiveModal(null)}
-                className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500 hover:text-gray-900 active:scale-95"
+                className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-[#1F293D] flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white active:scale-95"
               >
                 <X className="w-4 h-4" />
               </button>

@@ -31,52 +31,10 @@ interface ReviewState {
   deleteReview: (id: number) => void;
 }
 
-const initialReviews: ReviewRecord[] = [
-  {
-    id: 101,
-    productId: 2,
-    user: 'Alisher Z.',
-    productName: 'Luxe Parfum Elegance 100ml',
-    rating: 5,
-    comment: 'Juda zo\'r atir ekan, hidi 2 kun saqlandi! Hammaga tavsiya qilaman.',
-    pros: 'Uzoq saqlanadi, juda nafis ifor',
-    cons: 'Yo\'q',
-    date: '2026-08-08',
-    createdAt: Date.now() - 24 * 60 * 60 * 1000,
-    status: 'APPROVED',
-  },
-  {
-    id: 102,
-    productId: 1,
-    user: 'Malika S.',
-    productName: 'Premium Qishki Kurtka',
-    rating: 5,
-    comment: 'Matosi judayam sifatli va issiq! Qish uchun juda qulay.',
-    pros: 'Issiq va suv o\'tkazmaydi',
-    cons: 'Yo\'q',
-    date: '2026-08-07',
-    createdAt: Date.now() - 48 * 60 * 60 * 1000,
-    status: 'APPROVED',
-  },
-  {
-    id: 103,
-    productId: 4,
-    user: 'Jasur K.',
-    productName: 'Sport Krossovkalar Fly',
-    rating: 4,
-    comment: 'Yugurish uchun ancha yengil va qulay krossovka.',
-    pros: 'Yengil, amortizatsiyasi zo\'r',
-    cons: 'Oq qismi tez chang bo\'ladi',
-    date: '2026-08-08',
-    createdAt: Date.now() - 2 * 60 * 60 * 1000,
-    status: 'PENDING',
-  },
-];
-
 export const useReviewStore = create<ReviewState>()(
   persist(
     (set, get) => ({
-      reviews: initialReviews,
+      reviews: [],
 
       addReview: (reviewData) => {
         const nextId = Date.now();

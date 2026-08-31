@@ -64,12 +64,12 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
       const existing = customerStore.customers.find(
         (c) => c.telegramId === String(userData.id)
       );
-      if (!existing) {
+      if (!existing && userData.id) {
         customerStore.addCustomer({
           telegramId: String(userData.id),
           username: userData.username || '',
           name: `${userData.first_name || ''} ${userData.last_name || ''}`.trim() || 'Mijoz',
-          phone: userData.phone || '+998 90 123-45-67',
+          phone: userData.phone || '+998 (90) 123-45-67',
           avatar: userData.photo_url || undefined,
           totalSpent: 0,
           ordersCount: 0,
@@ -81,7 +81,6 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
       // Ignore
     }
   }, []);
-
 
   const loginWithWeb = useCallback((webUser: TelegramUser, sessionToken: string) => {
     setUser(webUser);
@@ -99,7 +98,6 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
     try {
       localStorage.removeItem('web_tg_user');
       localStorage.removeItem('web_tg_token');
-      // Clear cookie
       document.cookie = 'user_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     } catch (e) {}
   }, []);
@@ -176,17 +174,8 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
             setToken(savedWebToken || null);
             syncCustomerStore(parsed);
           } else {
-            // Default demo user for instant test experience on Web
-            const demoUser: TelegramUser = {
-              id: 998901234,
-              first_name: 'Foydalanuvchi',
-              last_name: '',
-              username: 'web_user',
-              phone: '+998 (90) 123-45-67',
-              language_code: 'uz',
-            };
-            setUser(demoUser);
-            syncCustomerStore(demoUser);
+            // Clean unauthenticated state
+            setUser(null);
           }
         } catch (e) {}
       }

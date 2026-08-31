@@ -48,7 +48,7 @@ export const ROLE_PERMISSIONS: Record<StaffRole, StaffPermission[]> = {
     'MANAGE_CUSTOMERS',
   ],
   COURIER: [
-    'MANAGE_ORDERS', // only assigned orders
+    'MANAGE_ORDERS',
   ],
 };
 
@@ -66,39 +66,12 @@ interface StaffStore {
 const initialStaff: StaffMember[] = [
   {
     id: 'STF-01',
-    name: 'Alisher Rahimov',
-    phone: '+998 90 123-45-67',
+    name: 'Admin',
+    phone: '+998 (90) 123-45-67',
     role: 'SUPER_ADMIN',
     isActive: true,
     lastActive: 'Hozir faol',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-  },
-  {
-    id: 'STF-02',
-    name: 'Madina Karimova',
-    phone: '+998 93 987-65-43',
-    role: 'MANAGER',
-    isActive: true,
-    lastActive: '10 daqiqa oldin',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
-  },
-  {
-    id: 'STF-03',
-    name: 'Dilshod Normatov',
-    phone: '+998 90 777-88-99',
-    role: 'OPERATOR',
-    isActive: true,
-    lastActive: '5 daqiqa oldin',
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150',
-  },
-  {
-    id: 'STF-04',
-    name: 'Jasur Bekmurodov',
-    phone: '+998 97 555-12-34',
-    role: 'COURIER',
-    isActive: true,
-    lastActive: '1 soat oldin',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+    avatar: '',
   },
 ];
 
