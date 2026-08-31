@@ -33,7 +33,10 @@ import {
   ExternalLink,
   SlidersHorizontal,
   ChevronDown,
+  LogIn,
 } from 'lucide-react';
+import { TelegramLoginModal } from '@/components/auth/TelegramLoginModal';
+
 
 interface OrderItem {
   id: string;
@@ -79,11 +82,14 @@ export default function ProfilePage() {
 
   // Promo Copied State
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [showWebAuthModal, setShowWebAuthModal] = useState(false);
 
   useEffect(() => {
     try {
       const savedLang = localStorage.getItem('app_lang') as 'uz' | 'ru' | 'en';
-      if (savedLang) setLang(savedLang);
+      if (savedLang) {
+        useLanguageStore.getState().setLang(savedLang);
+      }
 
       const savedNotif = localStorage.getItem('telegram_notifications');
       if (savedNotif !== null) {
@@ -94,6 +100,7 @@ export default function ProfilePage() {
       }
     } catch (e) {}
   }, []);
+
 
   const triggerHaptic = (type: 'light' | 'medium' | 'heavy' = 'light') => {
     try {
@@ -512,7 +519,39 @@ export default function ProfilePage() {
           </div>
           <ExternalLink className="w-4 h-4 text-gray-400" />
         </a>
+
+        {/* Telegram Web Login Button */}
+        <button
+          type="button"
+          onClick={() => {
+            triggerHaptic('medium');
+            setShowWebAuthModal(true);
+          }}
+          className="w-full p-3.5 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-[#161F30] active:bg-gray-100 dark:active:bg-[#1F293D] transition-colors text-left"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+              <LogIn className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="text-xs font-bold text-gray-950 dark:text-white">
+                {lang === 'uz' ? 'Telegram orqali qayta kirish' : lang === 'ru' ? 'Войти через Telegram' : 'Sign in with Telegram'}
+              </div>
+              <div className="text-[10px] text-gray-400">
+                {lang === 'uz' ? 'Akkauntni almashtirish yoki ulash' : lang === 'ru' ? 'Сменить аккаунт или подключить' : 'Switch or link account'}
+              </div>
+            </div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-gray-400" />
+        </button>
       </div>
+
+      <TelegramLoginModal
+        isOpen={showWebAuthModal}
+        onClose={() => setShowWebAuthModal(false)}
+        onSuccess={() => setShowWebAuthModal(false)}
+      />
+
 
       {/* ========================================================= */}
       {/* SEPARATE STANDALONE MODAL WINDOWS (ALOHIDA OYNALAR) */}

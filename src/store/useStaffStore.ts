@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type StaffRole = 'SUPER_ADMIN' | 'MANAGER' | 'COURIER';
+export type StaffRole = 'SUPER_ADMIN' | 'MANAGER' | 'OPERATOR' | 'COURIER';
 
 export interface StaffMember {
   id: string;
@@ -13,8 +13,50 @@ export interface StaffMember {
   avatar: string;
 }
 
+export type StaffPermission =
+  | 'VIEW_ANALYTICS'
+  | 'MANAGE_ORDERS'
+  | 'MANAGE_CATALOG'
+  | 'MANAGE_MARKETING'
+  | 'MANAGE_CUSTOMERS'
+  | 'MANAGE_SETTINGS'
+  | 'MANAGE_STAFF'
+  | 'VIEW_AUDIT_LOGS'
+  | 'DELETE_RECORDS';
+
+export const ROLE_PERMISSIONS: Record<StaffRole, StaffPermission[]> = {
+  SUPER_ADMIN: [
+    'VIEW_ANALYTICS',
+    'MANAGE_ORDERS',
+    'MANAGE_CATALOG',
+    'MANAGE_MARKETING',
+    'MANAGE_CUSTOMERS',
+    'MANAGE_SETTINGS',
+    'MANAGE_STAFF',
+    'VIEW_AUDIT_LOGS',
+    'DELETE_RECORDS',
+  ],
+  MANAGER: [
+    'VIEW_ANALYTICS',
+    'MANAGE_ORDERS',
+    'MANAGE_CATALOG',
+    'MANAGE_MARKETING',
+    'MANAGE_CUSTOMERS',
+  ],
+  OPERATOR: [
+    'MANAGE_ORDERS',
+    'MANAGE_CUSTOMERS',
+  ],
+  COURIER: [
+    'MANAGE_ORDERS', // only assigned orders
+  ],
+};
+
 interface StaffStore {
   staff: StaffMember[];
+  currentStaff: StaffMember;
+  setCurrentStaff: (member: StaffMember) => void;
+  hasPermission: (permission: StaffPermission) => boolean;
   addStaff: (member: Omit<StaffMember, 'id' | 'lastActive'>) => void;
   removeStaff: (id: string) => void;
   toggleStaffActive: (id: string) => void;
@@ -42,6 +84,15 @@ const initialStaff: StaffMember[] = [
   },
   {
     id: 'STF-03',
+    name: 'Dilshod Normatov',
+    phone: '+998 90 777-88-99',
+    role: 'OPERATOR',
+    isActive: true,
+    lastActive: '5 daqiqa oldin',
+    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150',
+  },
+  {
+    id: 'STF-04',
     name: 'Jasur Bekmurodov',
     phone: '+998 97 555-12-34',
     role: 'COURIER',
@@ -53,8 +104,14 @@ const initialStaff: StaffMember[] = [
 
 export const useStaffStore = create<StaffStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       staff: initialStaff,
+      currentStaff: initialStaff[0],
+      setCurrentStaff: (member) => set({ currentStaff: member }),
+      hasPermission: (permission) => {
+        const currentRole = get().currentStaff?.role || 'SUPER_ADMIN';
+        return ROLE_PERMISSIONS[currentRole]?.includes(permission) || false;
+      },
       addStaff: (member) =>
         set((state) => ({
           staff: [

@@ -1,10 +1,11 @@
 // Universal Telegram Mini App (TMA) E-Commerce — Admin Orders API
-// Secured with Authorization Check, Input Sanitization, and Immutable Refund Ledger
+// Secured with Authorization Check, Input Sanitization, Immutable Refund Ledger, and Telegram Bot Customer Dispatch
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sanitizeInput, safeParseInt, safeParseFloat } from '@/lib/sanitize';
 import { OrderStatus } from '@/types';
+import { sendCustomerOrderStatusNotification } from '@/lib/botNotifications';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,7 +24,7 @@ export async function GET(request: NextRequest) {
       where,
       orderBy: { created_at: 'desc' },
       include: {
-        user: { select: { first_name: true, last_name: true, username: true, phone: true } },
+        user: { select: { id: true, telegram_id: true, first_name: true, last_name: true, username: true, phone: true, language_code: true } },
         order_items: { include: { product: true } },
         transactions: true,
         branch: true,
@@ -69,14 +70,14 @@ export async function PATCH(request: NextRequest) {
 
     const order = await prisma.order.findUnique({
       where: { id: order_id },
-      include: { transactions: true },
+      include: { transactions: true, user: true },
     });
 
     if (!order) {
       return NextResponse.json({ success: false, error: 'Buyurtma topilmadi' }, { status: 404 });
     }
 
-    // Handle Partial Refund (Immutable Ledger Log)
+    // 1. Handle Partial Refund (Immutable Ledger Log)
     if (status === 'PARTIALLY_REFUNDED' && partial_refund_amount > 0) {
       await prisma.$transaction(async (tx) => {
         await tx.order.update({
@@ -108,11 +109,25 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ success: true, message: 'Qisman refund bajarildi' });
     }
 
-    // Standard Status Update
+    // 2. Standard Status Update
     const updatedOrder = await prisma.order.update({
       where: { id: order_id },
       data: { status },
     });
+
+    // 3. Dispatch Bot Alert to Customer
+    if (order.user?.telegram_id) {
+      try {
+        await sendCustomerOrderStatusNotification(
+          order.user.telegram_id.toString(),
+          order.order_number,
+          status,
+          (order.user.language_code as any) || 'uz'
+        );
+      } catch (e) {
+        console.warn('Failed to send status bot notification to user:', e);
+      }
+    }
 
     return NextResponse.json({ success: true, data: updatedOrder });
   } catch (error: any) {

@@ -133,3 +133,52 @@ export function validateAndParseStartAppParam(startParam?: string): {
     raw: startParam,
   };
 }
+
+/**
+ * 🌐 Telegram Web Login Widget Auth Verification
+ * Verifies payload from Telegram Login Widget (sha256(botToken) based HMAC)
+ */
+export function verifyTelegramWebAuth(
+  data: Record<string, any>,
+  botToken: string,
+  maxAgeSeconds: number = 86400 // 24 hours
+): TelegramAuthResult {
+  if (!data || !data.hash || !botToken) {
+    return { isValid: false };
+  }
+
+  try {
+    const { hash, ...rest } = data;
+    const sortedKeys = Object.keys(rest).sort();
+    const dataCheckString = sortedKeys.map((key) => `${key}=${rest[key]}`).join('\n');
+
+    // Web login uses SHA256 of botToken as secret key
+    const secretKey = crypto.createHash('sha256').update(botToken).digest();
+    const calculatedHash = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
+
+    if (calculatedHash !== hash) {
+      return { isValid: false };
+    }
+
+    const authDate = parseInt(data.auth_date, 10);
+    const now = Math.floor(Date.now() / 1000);
+    if (isNaN(authDate) || now - authDate > maxAgeSeconds) {
+      return { isValid: false };
+    }
+
+    return {
+      isValid: true,
+      user: {
+        id: Number(data.id),
+        first_name: data.first_name,
+        last_name: data.last_name,
+        username: data.username,
+        photo_url: data.photo_url,
+      },
+    };
+  } catch (err) {
+    console.error('Error verifying Telegram Web Auth:', err);
+    return { isValid: false };
+  }
+}
+
