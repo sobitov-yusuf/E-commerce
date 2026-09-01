@@ -17,6 +17,13 @@ interface AuditStore {
   clearLogs: () => void;
 }
 
+// Clear legacy fake cache automatically
+if (typeof window !== 'undefined') {
+  try {
+    localStorage.removeItem('store-audit-storage');
+  } catch (e) {}
+}
+
 export const useAuditStore = create<AuditStore>()(
   persist(
     (set) => ({
@@ -35,7 +42,7 @@ export const useAuditStore = create<AuditStore>()(
       clearLogs: () => set({ logs: [] }),
     }),
     {
-      name: 'store-audit-storage',
+      name: 'tma_real_audit_v3',
     }
   )
 );

@@ -22,6 +22,14 @@ interface CustomerState {
   updateCustomerStatus: (id: string, status: CustomerRecord['status']) => void;
   deleteCustomer: (id: string) => void;
   updateCustomerNotes: (id: string, notes: string) => void;
+  clearAllCustomers: () => void;
+}
+
+// Clear legacy fake cache automatically
+if (typeof window !== 'undefined') {
+  try {
+    localStorage.removeItem('store-customers-storage');
+  } catch (e) {}
 }
 
 export const useCustomerStore = create<CustomerState>()(
@@ -55,9 +63,11 @@ export const useCustomerStore = create<CustomerState>()(
         set((state) => ({
           customers: state.customers.map((c) => (c.id === id ? { ...c, notes } : c)),
         })),
+
+      clearAllCustomers: () => set({ customers: [] }),
     }),
     {
-      name: 'store-customers-storage',
+      name: 'tma_real_customers_v3',
     }
   )
 );

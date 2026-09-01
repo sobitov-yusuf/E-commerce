@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   TrendingUp,
   DollarSign,
@@ -19,7 +19,6 @@ import {
 } from 'lucide-react';
 import { useOrderStore } from '@/store/useOrderStore';
 import { useProductStore } from '@/store/useProductStore';
-import { useCustomerStore } from '@/store/useCustomerStore';
 import { useLanguageStore } from '@/store/useLanguageStore';
 
 interface DashboardHubProps {
@@ -29,17 +28,21 @@ interface DashboardHubProps {
 
 export function DashboardHub({ triggerHaptic, onNavigateToTab }: DashboardHubProps) {
   const { lang, t } = useLanguageStore();
-  const { orders = [] } = useOrderStore();
-  const { products = [] } = useProductStore();
-  const { customers = [] } = useCustomerStore();
+  const { orders = [], fetchOrders } = useOrderStore();
+  const { products = [], fetchProducts } = useProductStore();
 
   const [period, setPeriod] = useState<'today' | 'week' | 'month' | 'year'>('month');
   const [chartType, setChartType] = useState<'area' | 'bar'>('area');
 
+  useEffect(() => {
+    fetchOrders();
+    fetchProducts();
+  }, [fetchOrders, fetchProducts]);
+
   // Real Metrics from Database
   const totalRevenue = useMemo(() => {
     return (orders || [])
-      .filter((o) => o.status === 'COMPLETED' || o.status === 'DELIVERING')
+      .filter((o) => o.status === 'COMPLETED')
       .reduce((sum, o) => sum + (o.total || 0), 0);
   }, [orders]);
 
@@ -48,6 +51,12 @@ export function DashboardHub({ triggerHaptic, onNavigateToTab }: DashboardHubPro
   }, [orders]);
 
   const avgOrderValue = completedOrdersCount > 0 ? Math.round(totalRevenue / completedOrdersCount) : 0;
+
+  // Real Unique Customers from active orders
+  const uniqueCustomersCount = useMemo(() => {
+    const phones = new Set(orders.map((o) => o.phone).filter(Boolean));
+    return phones.size;
+  }, [orders]);
 
   // Real Top Products from Database
   const topProducts = useMemo(() => {
@@ -141,7 +150,7 @@ export function DashboardHub({ triggerHaptic, onNavigateToTab }: DashboardHubPro
           </div>
           <div>
             <div className="text-xl sm:text-2xl font-black text-gray-950 dark:text-white tracking-tight">
-              {customers.length} <span className="text-xs font-semibold text-gray-400">xaridor</span>
+              {uniqueCustomersCount} <span className="text-xs font-semibold text-gray-400">xaridor</span>
             </div>
             <div className="text-[11px] text-gray-400 mt-1">
               Ro'yxatdan o'tgan mijozlar

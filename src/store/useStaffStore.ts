@@ -75,6 +75,13 @@ const initialStaff: StaffMember[] = [
   },
 ];
 
+// Clear legacy fake cache automatically
+if (typeof window !== 'undefined') {
+  try {
+    localStorage.removeItem('store-staff-storage');
+  } catch (e) {}
+}
+
 export const useStaffStore = create<StaffStore>()(
   persist(
     (set, get) => ({
@@ -110,7 +117,7 @@ export const useStaffStore = create<StaffStore>()(
         })),
     }),
     {
-      name: 'store-staff-storage',
+      name: 'tma_real_staff_v3',
     }
   )
 );

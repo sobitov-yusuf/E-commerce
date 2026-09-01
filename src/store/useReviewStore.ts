@@ -31,6 +31,13 @@ interface ReviewState {
   deleteReview: (id: number) => void;
 }
 
+// Clear legacy fake cache automatically
+if (typeof window !== 'undefined') {
+  try {
+    localStorage.removeItem('store-reviews-storage');
+  } catch (e) {}
+}
+
 export const useReviewStore = create<ReviewState>()(
   persist(
     (set, get) => ({
@@ -93,7 +100,7 @@ export const useReviewStore = create<ReviewState>()(
         })),
     }),
     {
-      name: 'store-reviews-storage',
+      name: 'tma_real_reviews_v3',
       partialize: (state) => ({ reviews: state.reviews }),
     }
   )

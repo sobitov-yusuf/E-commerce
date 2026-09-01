@@ -44,6 +44,8 @@ export interface OrderItemRecord {
 
 interface OrderState {
   orders: OrderItemRecord[];
+  isLoading: boolean;
+  fetchOrders: () => Promise<void>;
   addOrder: (order: Omit<OrderItemRecord, 'id' | 'createdAt' | 'date'>) => string;
   updateOrderStatus: (id: string, status: OrderItemRecord['status'], cancelReason?: string, courierName?: string) => void;
   updateOrderPaymentStatus: (id: string, paymentStatus: OrderItemRecord['paymentStatus']) => void;
@@ -52,12 +54,61 @@ interface OrderState {
   deleteOrder: (id: string) => void;
   bulkUpdateStatus: (ids: string[], status: OrderItemRecord['status']) => void;
   bulkDeleteOrders: (ids: string[]) => void;
+  clearAllOrders: () => void;
+}
+
+// Clear legacy fake cache automatically
+if (typeof window !== 'undefined') {
+  try {
+    localStorage.removeItem('store-orders-storage');
+  } catch (e) {}
 }
 
 export const useOrderStore = create<OrderState>()(
   persist(
     (set, get) => ({
       orders: [],
+      isLoading: false,
+
+      fetchOrders: async () => {
+        set({ isLoading: true });
+        try {
+          const res = await fetch('/api/admin/orders');
+          const data = await res.json();
+          if (data.success && Array.isArray(data.data)) {
+            const mapped: OrderItemRecord[] = data.data.map((o: any) => ({
+              id: o.order_number || `#ORD-${o.id}`,
+              user: o.customer_name || `${o.user?.first_name || ''} ${o.user?.last_name || ''}`.trim() || 'Mijoz',
+              phone: o.customer_phone || o.user?.phone || '+998 (90) 123-45-67',
+              total: Number(o.total_price || 0),
+              subtotal: Number(o.subtotal_price || o.total_price || 0),
+              discountPrice: Number(o.discount_price || 0),
+              deliveryPrice: Number(o.delivery_price || 0),
+              status: o.status === 'PROCESSING' ? 'NEW' : o.status,
+              paymentType: o.payment_type,
+              paymentStatus: o.payment_status,
+              itemsCount: o.order_items?.length || 1,
+              date: new Date(o.created_at).toISOString().replace('T', ' ').slice(0, 16),
+              createdAt: new Date(o.created_at).getTime(),
+              location: o.address,
+              deliveryMethod: o.delivery_type === 'COURIER' ? 'courier' : 'pickup',
+              items: o.order_items?.map((item: any) => ({
+                id: item.product_id,
+                name: typeof item.product?.name === 'object' ? item.product?.name?.uz : String(item.product?.name || 'Mahsulot'),
+                price: Number(item.price || 0),
+                quantity: item.quantity,
+                image: item.product?.images?.[0] || '',
+              })),
+            }));
+            set({ orders: mapped, isLoading: false });
+          } else {
+            set({ orders: [], isLoading: false });
+          }
+        } catch (e) {
+          console.error('Fetch orders error:', e);
+          set({ isLoading: false });
+        }
+      },
 
       addOrder: (orderData) => {
         const orderId = `#ORD-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -99,12 +150,10 @@ export const useOrderStore = create<OrderState>()(
             let nextPaymentStatus = order.paymentStatus;
             let paymentNote = '';
 
-            // Auto transition: Cash on completion becomes PAID
             if (status === 'COMPLETED' && order.paymentType === 'CASH' && order.paymentStatus === 'PENDING') {
               nextPaymentStatus = 'PAID';
               paymentNote = ' (Naqd to\'lov qabul qilindi - PAID)';
             }
-            // Auto transition: Paid order on cancellation becomes REFUNDED
             if (status === 'CANCELLED' && order.paymentStatus === 'PAID') {
               nextPaymentStatus = 'REFUNDED';
               paymentNote = ' (Mablag\' qaytarishga o\'tkazildi - REFUNDED)';
@@ -218,9 +267,11 @@ export const useOrderStore = create<OrderState>()(
         set((state) => ({
           orders: state.orders.filter((order) => !ids.includes(order.id)),
         })),
+
+      clearAllOrders: () => set({ orders: [] }),
     }),
     {
-      name: 'store-orders-storage',
+      name: 'tma_real_orders_v3',
       partialize: (state) => ({ orders: state.orders }),
     }
   )

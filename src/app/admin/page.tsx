@@ -24,12 +24,15 @@ import { CustomersHub } from '@/components/admin/CustomersHub';
 import { MarketingHub } from '@/components/admin/MarketingHub';
 import { SettingsHub } from '@/components/admin/SettingsHub';
 
+import { useOrderStore } from '@/store/useOrderStore';
+
 type AdminTab = 'dashboard' | 'orders' | 'catalog' | 'customers' | 'marketing' | 'settings';
 
 export default function AdminConsolePage() {
   const { lang, t } = useLanguageStore();
   const { theme, initializeTheme } = useThemeStore();
   const { hasPermission } = useStaffStore();
+  const { fetchOrders } = useOrderStore();
 
   const [isMounted, setIsMounted] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
@@ -38,7 +41,17 @@ export default function AdminConsolePage() {
   useEffect(() => {
     setIsMounted(true);
     initializeTheme();
-  }, [initializeTheme]);
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('store-orders-storage');
+        localStorage.removeItem('store-customers-storage');
+        localStorage.removeItem('store-staff-storage');
+        localStorage.removeItem('store-reviews-storage');
+        localStorage.removeItem('store-audit-storage');
+      }
+    } catch (e) {}
+    fetchOrders();
+  }, [initializeTheme, fetchOrders]);
 
   const triggerHaptic = (type: 'light' | 'medium' | 'heavy' = 'light') => {
     try {

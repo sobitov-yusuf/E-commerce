@@ -128,16 +128,26 @@ export function CustomersHub({ searchQuery, triggerHaptic }: CustomersHubProps) 
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-white/10">
-              {filteredCustomers.map((c) => (
-                <tr
-                  key={c.id}
-                  onClick={() => {
-                    setSelectedCustomer(c);
-                    setEditingNotes(c.notes || '');
-                    triggerHaptic('light');
-                  }}
-                  className="hover:bg-gray-50/50 dark:hover:bg-[#161F30]/50 cursor-pointer transition-colors"
-                >
+              {filteredCustomers.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-12 text-center">
+                    <Users className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+                    <div className="text-xs font-semibold text-gray-400">
+                      {lang === 'uz' ? 'Hozircha mijozlar mavjud emas' : 'Клиентов пока нет'}
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filteredCustomers.map((c) => (
+                  <tr
+                    key={c.id}
+                    onClick={() => {
+                      setSelectedCustomer(c);
+                      setEditingNotes(c.notes || '');
+                      triggerHaptic('light');
+                    }}
+                    className="hover:bg-gray-50/50 dark:hover:bg-[#161F30]/50 cursor-pointer transition-colors"
+                  >
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-[#161F30] border border-gray-200 dark:border-white/10 flex items-center justify-center font-bold text-gray-900 dark:text-white shrink-0 overflow-hidden">
@@ -184,7 +194,7 @@ export function CustomersHub({ searchQuery, triggerHaptic }: CustomersHubProps) 
                     </span>
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>

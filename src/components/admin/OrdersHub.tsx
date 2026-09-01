@@ -37,7 +37,11 @@ interface OrdersHubProps {
 export function OrdersHub({ searchQuery, triggerHaptic, openConfirmDialog }: OrdersHubProps) {
   const { lang, t } = useLanguageStore();
   const { hasPermission, staff } = useStaffStore();
-  const { orders, updateOrderStatus, assignCourier } = useOrderStore();
+  const { orders, updateOrderStatus, assignCourier, fetchOrders } = useOrderStore();
+
+  React.useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
 
   const [statusFilter, setStatusFilter] = useState<'ALL' | OrderItemRecord['status']>('ALL');
   const [selectedOrder, setSelectedOrder] = useState<OrderItemRecord | null>(null);
