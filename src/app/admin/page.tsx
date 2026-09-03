@@ -147,7 +147,7 @@ export default function AdminConsolePage() {
           {activeTab === 'dashboard' && (
             <DashboardHub
               triggerHaptic={triggerHaptic}
-              onNavigateToTab={(tab) => {
+              onNavigateToTab={(tab: any) => {
                 setActiveTab(tab as AdminTab);
                 triggerHaptic('light');
               }}

@@ -6,17 +6,17 @@ import { useLanguageStore } from '@/store/useLanguageStore';
 import { MultilingualText } from '@/types';
 
 interface CategoryItem {
-  id: number;
+  id: number | string;
   name: MultilingualText | string;
-  image: string;
+  image?: string | null;
   isActive: boolean;
   showOnHome?: boolean;
 }
 
 interface CategoryCarouselProps {
   categories: CategoryItem[];
-  selectedCategoryId: number | null;
-  onSelectCategory: (id: number | null) => void;
+  selectedCategoryId: number | string | null;
+  onSelectCategory: (id: number | string | null) => void;
   triggerHaptic?: (type?: 'light' | 'medium') => void;
 }
 
@@ -123,7 +123,7 @@ export function CategoryCarousel({
                 }`}
               >
                 <img
-                  src={cat.image}
+                  src={cat.image || undefined}
                   alt={localizedName}
                   className="w-full h-full object-cover object-center pointer-events-none rounded-full"
                 />

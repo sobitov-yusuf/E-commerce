@@ -3,1080 +3,424 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useTelegram } from '@/components/telegram/TelegramProvider';
-import { useWishlistStore } from '@/store/useWishlistStore';
 import { useLanguageStore } from '@/store/useLanguageStore';
 import { useThemeStore } from '@/store/useThemeStore';
 import { useOrderStore } from '@/store/useOrderStore';
 import {
-  Globe,
-  ShieldCheck,
-  Moon,
-  Sun,
-  Truck,
-  CheckCircle2,
   Package,
-  Clock,
   Wallet,
-  Tag,
   MapPin,
+  Globe,
+  Sun,
+  Moon,
   HelpCircle,
+  Bell,
+  HeadphonesIcon,
   ChevronRight,
-  Phone,
-  MessageCircle,
-  Copy,
   Check,
   X,
   Plus,
-  Bell,
-  BellOff,
-  Sparkles,
-  ExternalLink,
-  SlidersHorizontal,
-  ChevronDown,
-  LogIn,
-  PackageSearch,
+  Trash2,
+  AlertTriangle,
+  BadgeCheck,
+  ExternalLink
 } from 'lucide-react';
 import { TelegramLoginModal } from '@/components/auth/TelegramLoginModal';
 
-interface OrderItem {
-  id: string;
-  date: string;
-  total: number;
-  status: 'DELIVERING' | 'COMPLETED';
-  statusText: string;
-  deliveryType: string;
-  address: string;
-  paymentMethod: string;
-  products: {
-    name: string;
-    image: string;
-    qty: number;
-    price: number;
-  }[];
-}
-
 export default function ProfilePage() {
-  const { user: tgUser } = useTelegram();
-  const { productIds } = useWishlistStore();
-  const { lang, setLang, t } = useLanguageStore();
-  const { theme: themeMode, setTheme: setThemeMode } = useThemeStore();
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [showNotifConfirmModal, setShowNotifConfirmModal] = useState(false);
+  const { user, isTelegramWebApp } = useTelegram();
+  const { lang, setLanguage } = useLanguageStore();
+  const { theme, setTheme, isDark } = useThemeStore();
+  const { orders } = useOrderStore();
 
-  // Active Modals State ('orders' | 'wallet' | 'addresses' | 'language' | 'theme' | 'faq' | null)
-  const [activeModal, setActiveModal] = useState<string | null>(null);
+  const [activeModal, setActiveModal] = useState<
+    'orders' | 'cashback' | 'address' | 'language' | 'theme' | 'faq' | 'support' | null
+  >(null);
 
-  // Order Details Modal
-  const [selectedOrderDetails, setSelectedOrderDetails] = useState<OrderItem | null>(null);
-  const [activeOrderTab, setActiveOrderTab] = useState<'all' | 'delivering' | 'completed'>('all');
+  // Notifications State
+  const [notifEnabled, setNotifEnabled] = useState(true);
+  const [showNotifDialog, setShowNotifDialog] = useState(false);
 
-  // FAQ Accordion
-  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
-
-  // Addresses State (Starts Empty 0)
-  const [addresses, setAddresses] = useState<string[]>([]);
-  const [showAddAddressInput, setShowAddAddressInput] = useState(false);
-  const [newAddressInput, setNewAddressInput] = useState('');
-
-  // Promo Copied State
-  const [copiedCode, setCopiedCode] = useState<string | null>(null);
-  const [showWebAuthModal, setShowWebAuthModal] = useState(false);
+  // Address State
+  const [addresses, setAddresses] = useState([
+    { id: '1', title: 'Uy', address: 'Toshkent sh., Yunusobod, 4-daha, 12-uy' },
+  ]);
+  const [newAddress, setNewAddress] = useState('');
+  const [showAddAddress, setShowAddAddress] = useState(false);
 
   useEffect(() => {
-    try {
-      const savedLang = localStorage.getItem('app_lang') as 'uz' | 'ru' | 'en';
-      if (savedLang) {
-        useLanguageStore.getState().setLang(savedLang);
-      }
-
-      const savedNotif = localStorage.getItem('telegram_notifications');
-      if (savedNotif !== null) {
-        setNotificationsEnabled(savedNotif === 'true');
-      } else {
-        setNotificationsEnabled(true);
-        localStorage.setItem('telegram_notifications', 'true');
-      }
-    } catch (e) {}
+    if (typeof window !== 'undefined') {
+      const savedNotif = localStorage.getItem('notifications_enabled');
+      if (savedNotif !== null) setNotifEnabled(savedNotif === 'true');
+    }
   }, []);
 
-  const triggerHaptic = (type: 'light' | 'medium' | 'heavy' = 'light') => {
-    try {
-      if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.HapticFeedback) {
-        (window as any).Telegram.WebApp.HapticFeedback.impactOccurred(type);
-      }
-    } catch (e) {}
-  };
-
-  const changeLang = (newLang: 'uz' | 'ru' | 'en') => {
-    triggerHaptic('light');
-    setLang(newLang);
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem('app_lang', newLang);
-        window.dispatchEvent(new Event('languageChange'));
-      } catch (e) {}
-    }
-  };
-
-  const handleCopyPromo = (code: string) => {
-    triggerHaptic('medium');
-    if (typeof navigator !== 'undefined') {
-      navigator.clipboard.writeText(code);
-      setCopiedCode(code);
-      setTimeout(() => setCopiedCode(null), 2000);
-    }
-  };
-
-  const handleAddAddress = (e: React.FormEvent) => {
+  const handleNotifToggle = (e: React.MouseEvent) => {
     e.preventDefault();
-    if (!newAddressInput.trim()) return;
-    triggerHaptic('medium');
-    setAddresses([...addresses, newAddressInput.trim()]);
-    setNewAddressInput('');
-    setShowAddAddressInput(false);
+    e.stopPropagation();
+    if (notifEnabled) {
+      setShowNotifDialog(true);
+    } else {
+      setNotifEnabled(true);
+      if (typeof window !== 'undefined') localStorage.setItem('notifications_enabled', 'true');
+    }
   };
 
-  const displayName = tgUser
-    ? `${tgUser.first_name || ''} ${tgUser.last_name || ''}`.trim() || 'Foydalanuvchi'
-    : 'Foydalanuvchi';
+  const confirmDisableNotif = () => {
+    setNotifEnabled(false);
+    if (typeof window !== 'undefined') localStorage.setItem('notifications_enabled', 'false');
+    setShowNotifDialog(false);
+  };
 
-  const username = tgUser?.username
-    ? `@${tgUser.username}`
-    : tgUser?.phone || 'Mijoz';
-
-  const storeOrders = useOrderStore((state) => state.orders);
-
-  // Dynamic Orders Data mapped from useOrderStore
-  const orders: OrderItem[] = storeOrders.map((o) => {
-    let statusText = 'Yetkazilmoqda';
-    if (o.status === 'COMPLETED') statusText = 'Yetkazib berildi';
-    else if (o.status === 'CANCELLED') statusText = 'Bekor qilindi';
-    else if (o.status === 'NEW') statusText = 'Yangi buyurtma';
-
-    return {
-      id: o.id,
-      date: o.date,
-      total: o.total,
-      status: (o.status === 'DELIVERING' || o.status === 'NEW') ? 'DELIVERING' : 'COMPLETED',
-      statusText,
-      deliveryType: o.deliveryMethod === 'courier' ? 'Kuryer orqali' : 'Topshirish punkti (PVZ)',
-      address: o.location || 'Yetkazib berish manzili',
-      paymentMethod: o.paymentType || 'Payme / Click',
-      products: o.items && o.items.length > 0 ? o.items.map((i) => ({
-        name: i.name,
-        image: i.image,
-        qty: i.quantity,
-        price: i.price,
-      })) : [
-        {
-          name: 'Buyurtma tovarlari',
-          image: 'https://images.unsplash.com/photo-1544441893-675973e31985?w=300',
-          qty: o.itemsCount || 1,
-          price: o.total,
-        },
-      ],
-    };
-  });
-
-  const filteredOrders = orders.filter((order) => {
-    if (activeOrderTab === 'delivering') return order.status === 'DELIVERING';
-    if (activeOrderTab === 'completed') return order.status === 'COMPLETED';
-    return true;
-  });
-
-  const deliveringOrdersCount = orders.filter((o) => o.status === 'DELIVERING').length;
-  const completedOrdersCount = orders.filter((o) => o.status === 'COMPLETED').length;
-
-  const faqs = [
+  const menuGroups = [
     {
-      q: {
-        uz: "Yetkazib berish qancha vaqt oladi va narxi qancha?",
-        ru: "Сколько времени занимает доставка и сколько она стоит?",
-        en: "How long does delivery take and how much does it cost?",
-      },
-      a: {
-        uz: "Toshkent shahri bo'ylab buyurtmalar 2-3 soat ichida yetkaziladi. 300,000 UZS dan ortiq buyurtmalar uchun yetkazib berish bepul! Viloyatlarga esa 1-2 ish kunida yetkaziladi.",
-        ru: "По Ташкенту заказы доставляются за 2-3 часа. Для заказов от 300 000 UZS доставка бесплатная! По областям — 1-2 рабочих дня.",
-        en: "Orders within Tashkent are delivered in 2-3 hours. Delivery is free for orders over 300,000 UZS! Regions take 1-2 business days.",
-      },
+      group: 'main',
+      items: [
+        { id: 'orders', icon: Package, color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-500/10', label: { uz: 'Mening buyurtmalarim', ru: 'Мои заказы', en: 'My Orders' } },
+        { id: 'cashback', icon: Wallet, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-500/10', label: { uz: 'Keshbek va Promokodlar', ru: 'Кэшбэк и Промокоды', en: 'Cashback & Promo Codes' } },
+        { id: 'address', icon: MapPin, color: 'text-rose-500', bg: 'bg-rose-50 dark:bg-rose-500/10', label: { uz: 'Saqlangan manzillar', ru: 'Сохраненные адреса', en: 'Saved Addresses' } },
+      ]
     },
     {
-      q: {
-        uz: "To'lovni qanday amalga oshirsam bo'ladi?",
-        ru: "Как я могу оплатить заказ?",
-        en: "How can I pay for my order?",
-      },
-      a: {
-        uz: "To'lovni mahsulotni qabul qilib olgach naqd pulda, yoki buyurtma berish jarayonida Payme, Click va Uzum Bank orqali to'lashingiz mumkin.",
-        ru: "Вы можете оплатить наличными при получении товара или онлайн через Payme, Click и Uzum Bank.",
-        en: "You can pay with cash upon delivery, or online via Payme, Click and Uzum Bank.",
-      },
+      group: 'settings',
+      items: [
+        { id: 'language', icon: Globe, color: 'text-indigo-500', bg: 'bg-indigo-50 dark:bg-indigo-500/10', label: { uz: 'Tilni o\'zgartirish', ru: 'Изменить язык', en: 'Change Language' } },
+        { id: 'theme', icon: isDark ? Moon : Sun, color: 'text-amber-500', bg: 'bg-amber-50 dark:bg-amber-500/10', label: { uz: 'Mavzu rejimi', ru: 'Тема', en: 'Theme Mode' } },
+      ]
     },
     {
-      q: {
-        uz: "Mahsulot to'g'ri kelmasa qaytarish mumkinmi?",
-        ru: "Можно ли вернуть товар, если он не подошел?",
-        en: "Can I return the item if it does not fit?",
-      },
-      a: {
-        uz: "Albatta! Mahsulot o'rami va tovar ko'rinishi saqlangan holda 10 kun ichida bepul qaytarish yoki o'lchamini almashtirish imkoniyati mavjud.",
-        ru: "Конечно! Вы можете бесплатно вернуть или обменять товар в течение 10 дней при сохранении товарного вида и упаковки.",
-        en: "Of course! You can return or exchange the product within 10 days for free, keeping the original packaging.",
-      },
-    },
-    {
-      q: {
-        uz: "Keshbek va promokodlarni qanday ishlataman?",
-        ru: "Как использовать кэшбэк и промокоды?",
-        en: "How do I use cashback and promo codes?",
-      },
-      a: {
-        uz: "Har bir xaridingizdan keshbek to'planadi. Savat bo'limida navbatdagi xaridlaringiz uchun to'liq chegirma sifatida qo'llashingiz mumkin.",
-        ru: "С каждой покупки начисляется кэшбэк. Вы можете применить его как скидку в корзине при следующих покупках.",
-        en: "You earn cashback on purchases. You can apply it as a full discount in your cart on future orders.",
-      },
-    },
+      group: 'support',
+      items: [
+        { id: 'faq', icon: HelpCircle, color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-500/10', label: { uz: 'Ko\'p So\'raladigan Savollar', ru: 'Часто задаваемые вопросы', en: 'FAQ' } },
+        { id: 'support', icon: HeadphonesIcon, color: 'text-sky-500', bg: 'bg-sky-50 dark:bg-sky-500/10', label: { uz: '24/7 Yordam (Operator)', ru: '24/7 Поддержка (Оператор)', en: '24/7 Support (Operator)' } },
+      ]
+    }
   ];
 
-  return (
-    <div className="space-y-3.5 pb-16 animate-in fade-in max-w-lg mx-auto">
-      {/* 1. COMPACT USER PROFILE HEADER CARD */}
-      <div className="bg-white dark:bg-[#111827] rounded-2xl p-4 sm:p-4.5 border border-gray-200/80 dark:border-white/10 shadow-2xs space-y-3.5">
-        <div className="flex items-center gap-3.5">
-          {/* Circular Clean Avatar */}
-          <div className="relative shrink-0">
-            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-gray-900 via-gray-800 to-gray-700 text-white text-xl font-bold flex items-center justify-center shadow-xs border-2 border-white dark:border-[#111827] ring-2 ring-gray-100 dark:ring-white/10 select-none">
-              {displayName ? displayName.charAt(0).toUpperCase() : 'U'}
-            </div>
-            {/* Verified Small Corner Badge */}
-            <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center border-2 border-white dark:border-[#111827] shadow-2xs">
-              <Check className="w-3 h-3 stroke-[3]" />
-            </div>
-          </div>
-
-          <div className="flex-1 min-w-0">
-            <h1 className="text-base font-bold text-gray-950 dark:text-white truncate leading-tight">
-              {displayName}
-            </h1>
-            <p className="text-xs text-gray-400 dark:text-gray-400 font-normal mt-0.5">{username}</p>
-            <div className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 text-[10px] font-semibold border border-emerald-200/80 dark:border-emerald-800/40">
-              <ShieldCheck className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-              <span>{t('profile_verified_buyer')}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* 3 Quick Indicator Buttons */}
-        <div className="grid grid-cols-3 gap-2 pt-2 border-t border-gray-100 dark:border-white/10 text-center">
-          <button
-            type="button"
-            onClick={() => {
-              triggerHaptic('light');
-              setActiveModal('orders');
-            }}
-            className="p-2 rounded-xl bg-gray-50/90 dark:bg-[#161F30] hover:bg-gray-100/90 dark:hover:bg-[#1F293D] active:scale-95 transition-all"
-          >
-            <span className="text-[10px] text-gray-400 dark:text-gray-400 font-medium block">{t('profile_orders')}</span>
-            <span className="text-xs font-bold text-gray-950 dark:text-white">{orders.length} {t('pcs')}</span>
-          </button>
-
-          <Link
-            href="/wishlist"
-            onClick={() => triggerHaptic('light')}
-            className="p-2 rounded-xl bg-gray-50/90 dark:bg-[#161F30] hover:bg-gray-100/90 dark:hover:bg-[#1F293D] active:scale-95 transition-all"
-          >
-            <span className="text-[10px] text-gray-400 dark:text-gray-400 font-medium block">{t('profile_wishlist')}</span>
-            <span className="text-xs font-bold text-gray-950 dark:text-white">{productIds.length} {t('pcs')}</span>
-          </Link>
-
-          <button
-            type="button"
-            onClick={() => {
-              triggerHaptic('light');
-              setActiveModal('wallet');
-            }}
-            className="p-2 rounded-xl bg-gray-50/90 dark:bg-[#161F30] hover:bg-gray-100/90 dark:hover:bg-[#1F293D] active:scale-95 transition-all"
-          >
-            <span className="text-[10px] text-gray-400 dark:text-gray-400 font-medium block">{t('profile_cashback')}</span>
-            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">0 {t('currency')}</span>
-          </button>
-        </div>
+  if (!user && !isTelegramWebApp) {
+    return (
+      <div className="py-24">
+        <TelegramLoginModal isOpen={true} onClose={() => {}} />
       </div>
+    );
+  }
 
-      {/* 2. MENU GROUP 1: PURCHASES & WALLET */}
-      <div className="bg-white dark:bg-[#111827] rounded-2xl border border-gray-200/80 dark:border-white/10 shadow-2xs divide-y divide-gray-100 dark:divide-white/10 overflow-hidden">
-        {/* Orders Row */}
-        <button
-          type="button"
-          onClick={() => {
-            triggerHaptic('light');
-            setActiveModal('orders');
-          }}
-          className="w-full p-3.5 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-[#161F30] active:bg-gray-100 dark:active:bg-[#1F293D] transition-colors text-left"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-gray-100 dark:bg-[#1F293D] flex items-center justify-center text-gray-900 dark:text-white">
-              <Package className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="text-xs font-bold text-gray-900 dark:text-white">{t('profile_my_orders')}</div>
-              <div className="text-[10px] text-gray-400 dark:text-gray-400">{t('profile_orders_desc')}</div>
-            </div>
-          </div>
-          <div className="flex items-center gap-1.5 text-gray-400">
-            <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-[#161F30] px-2 py-0.5 rounded-md">
-              {orders.length} {t('pcs')}
-            </span>
-            <ChevronRight className="w-4 h-4" />
-          </div>
-        </button>
+  const renderDrawer = () => {
+    if (!activeModal) return null;
 
-        {/* Wallet & Promocodes Row */}
-        <button
-          type="button"
-          onClick={() => {
-            triggerHaptic('light');
-            setActiveModal('wallet');
-          }}
-          className="w-full p-3.5 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-[#161F30] active:bg-gray-100 dark:active:bg-[#1F293D] transition-colors text-left"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 flex items-center justify-center">
-              <Wallet className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="text-xs font-bold text-gray-900 dark:text-white">{t('profile_wallet')}</div>
-              <div className="text-[10px] text-gray-400 dark:text-gray-400">{t('profile_wallet_desc')}</div>
-            </div>
-          </div>
-          <div className="flex items-center gap-1.5 text-gray-400">
-            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-md">
-              0 {t('currency')}
-            </span>
-            <ChevronRight className="w-4 h-4" />
-          </div>
-        </button>
-
-        {/* Saved Addresses Row */}
-        <button
-          type="button"
-          onClick={() => {
-            triggerHaptic('light');
-            setActiveModal('addresses');
-          }}
-          className="w-full p-3.5 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-[#161F30] active:bg-gray-100 dark:active:bg-[#1F293D] transition-colors text-left"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400 flex items-center justify-center">
-              <MapPin className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="text-xs font-bold text-gray-900 dark:text-white">{t('profile_addresses')}</div>
-              <div className="text-[10px] text-gray-400 dark:text-gray-400">{t('profile_addresses_desc')}</div>
-            </div>
-          </div>
-          <div className="flex items-center gap-1.5 text-gray-400">
-            <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
-              {addresses.length} {t('pcs')}
-            </span>
-            <ChevronRight className="w-4 h-4" />
-          </div>
-        </button>
-      </div>
-
-      {/* 3. MENU GROUP 2: SETTINGS & PREFERENCES */}
-      <div className="bg-white dark:bg-[#111827] rounded-2xl border border-gray-200/80 dark:border-white/10 shadow-2xs divide-y divide-gray-100 dark:divide-white/10 overflow-hidden">
-        {/* Language Row */}
-        <button
-          type="button"
-          onClick={() => {
-            triggerHaptic('light');
-            setActiveModal('language');
-          }}
-          className="w-full p-3.5 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-[#161F30] active:bg-gray-100 dark:active:bg-[#1F293D] transition-colors text-left"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-gray-100 dark:bg-[#1F293D] text-gray-900 dark:text-white flex items-center justify-center">
-              <Globe className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="text-xs font-bold text-gray-900 dark:text-white">{t('profile_language')}</div>
-              <div className="text-[10px] text-gray-400 dark:text-gray-400">{t('profile_language_desc')}</div>
-            </div>
-          </div>
-          <div className="flex items-center gap-1.5 text-gray-400">
-            <span className="text-xs font-bold uppercase text-gray-900 dark:text-white bg-gray-100 dark:bg-[#161F30] px-2 py-0.5 rounded-md">
-              {lang}
-            </span>
-            <ChevronRight className="w-4 h-4" />
-          </div>
-        </button>
-
-        {/* Theme Mode Row */}
-        <button
-          type="button"
-          onClick={() => {
-            triggerHaptic('light');
-            setActiveModal('theme');
-          }}
-          className="w-full p-3.5 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-[#161F30] active:bg-gray-100 dark:active:bg-[#1F293D] transition-colors text-left"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 flex items-center justify-center">
-              {themeMode === 'light' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </div>
-            <div>
-              <div className="text-xs font-bold text-gray-900 dark:text-white">{t('profile_theme')}</div>
-              <div className="text-[10px] text-gray-400 dark:text-gray-400">{t('profile_theme_desc')}</div>
-            </div>
-          </div>
-          <div className="flex items-center gap-1.5 text-gray-400">
-            <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-              {themeMode === 'light' ? t('profile_modal_theme_light') : t('profile_modal_theme_dark')}
-            </span>
-            <ChevronRight className="w-4 h-4" />
-          </div>
-        </button>
-
-        {/* Notifications Direct Switch Row */}
-        <div className="p-3.5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-400 flex items-center justify-center">
-              <Bell className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="text-xs font-bold text-gray-900 dark:text-white">{t('profile_notifications')}</div>
-              <div className="text-[10px] text-gray-400 dark:text-gray-400">{t('profile_notifications_desc')}</div>
-            </div>
+    return (
+      <div className="fixed inset-0 z-[100] flex flex-col justify-end">
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setActiveModal(null)} />
+        <div className="relative w-full h-[85vh] bg-white dark:bg-[#111827] rounded-t-3xl shadow-2xl flex flex-col animate-in slide-in-from-bottom-full duration-200">
+          
+          {/* Handle */}
+          <div className="w-full flex justify-center pt-3 pb-2 shrink-0" onClick={() => setActiveModal(null)}>
+            <div className="w-12 h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full" />
           </div>
 
-          <button
-            type="button"
-            role="checkbox"
-            aria-checked={notificationsEnabled}
-            onClick={() => {
-              if (notificationsEnabled) {
-                triggerHaptic('medium');
-                setShowNotifConfirmModal(true);
-              } else {
-                triggerHaptic('light');
-                setNotificationsEnabled(true);
-                try {
-                  localStorage.setItem('telegram_notifications', 'true');
-                } catch (e) {}
-              }
-            }}
-            className={`w-5 h-5 rounded-md flex items-center justify-center transition-all duration-150 active:scale-90 border ${
-              notificationsEnabled
-                ? 'bg-gray-900 dark:bg-white border-gray-900 dark:border-white text-white dark:text-gray-950 shadow-xs'
-                : 'bg-white dark:bg-[#161F30] border-gray-300 dark:border-white/20 text-transparent'
-            }`}
-          >
-            {notificationsEnabled && <Check className="w-3.5 h-3.5 stroke-[3] text-white dark:text-gray-950" />}
-          </button>
-        </div>
-      </div>
-
-      {/* 4. MENU GROUP 3: SUPPORT & LEGAL */}
-      <div className="bg-white dark:bg-[#111827] rounded-2xl border border-gray-200/80 dark:border-white/10 shadow-2xs divide-y divide-gray-100 dark:divide-white/10 overflow-hidden">
-        {/* FAQ Row */}
-        <button
-          type="button"
-          onClick={() => {
-            triggerHaptic('light');
-            setActiveModal('faq');
-          }}
-          className="w-full p-3.5 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-[#161F30] active:bg-gray-100 dark:active:bg-[#1F293D] transition-colors text-left"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-gray-100 dark:bg-[#1F293D] text-gray-900 dark:text-white flex items-center justify-center">
-              <HelpCircle className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="text-xs font-bold text-gray-900 dark:text-white">{t('profile_faq')}</div>
-              <div className="text-[10px] text-gray-400 dark:text-gray-400">{t('profile_faq_desc')}</div>
-            </div>
+          <div className="flex items-center justify-between px-6 pb-4 border-b border-gray-100 dark:border-white/5 shrink-0">
+            <h3 className="text-lg font-black text-gray-950 dark:text-white capitalize">
+              {activeModal === 'orders' ? (lang === 'uz' ? 'Buyurtmalarim' : 'Мои заказы') :
+               activeModal === 'cashback' ? (lang === 'uz' ? 'Keshbek' : 'Кэшбэк') :
+               activeModal === 'address' ? (lang === 'uz' ? 'Manzillar' : 'Адреса') :
+               activeModal === 'language' ? (lang === 'uz' ? 'Til tanlash' : 'Выбор языка') :
+               activeModal === 'theme' ? (lang === 'uz' ? 'Mavzu' : 'Тема') :
+               activeModal === 'faq' ? 'FAQ' :
+               activeModal === 'support' ? (lang === 'uz' ? 'Yordam' : 'Поддержка') : ''}
+            </h3>
+            <button onClick={() => setActiveModal(null)} className="w-8 h-8 flex items-center justify-center bg-gray-100 dark:bg-[#161F30] text-gray-950 dark:text-white rounded-full">
+              <X className="w-5 h-5" />
+            </button>
           </div>
-          <ChevronRight className="w-4 h-4 text-gray-400" />
-        </button>
 
-        {/* 24/7 Operator Chat Link */}
-        <a
-          href="https://t.me/menejer_aloqa"
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={() => triggerHaptic('medium')}
-          className="w-full p-3.5 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-[#161F30] active:bg-gray-100 dark:active:bg-[#1F293D] transition-colors text-left"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-gray-950 flex items-center justify-center">
-              <MessageCircle className="w-4 h-4 text-white dark:text-gray-950" />
-            </div>
-            <div>
-              <div className="text-xs font-bold text-gray-900 dark:text-white">{t('profile_support')}</div>
-              <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">{t('profile_support_badge')}</div>
-            </div>
-          </div>
-          <ExternalLink className="w-4 h-4 text-gray-400" />
-        </a>
-
-        {/* Telegram Web Login Button */}
-        <button
-          type="button"
-          onClick={() => {
-            triggerHaptic('medium');
-            setShowWebAuthModal(true);
-          }}
-          className="w-full p-3.5 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-[#161F30] active:bg-gray-100 dark:active:bg-[#1F293D] transition-colors text-left"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-              <LogIn className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="text-xs font-bold text-gray-950 dark:text-white">
-                {lang === 'uz' ? 'Telegram orqali qayta kirish' : lang === 'ru' ? 'Войти через Telegram' : 'Sign in with Telegram'}
-              </div>
-              <div className="text-[10px] text-gray-400">
-                {lang === 'uz' ? 'Akkauntni almashtirish yoki ulash' : lang === 'ru' ? 'Сменить аккаунт или подключить' : 'Switch or link account'}
-              </div>
-            </div>
-          </div>
-          <ChevronRight className="w-4 h-4 text-gray-400" />
-        </button>
-      </div>
-
-      <TelegramLoginModal
-        isOpen={showWebAuthModal}
-        onClose={() => setShowWebAuthModal(false)}
-        onSuccess={() => setShowWebAuthModal(false)}
-      />
-
-      {/* ========================================================= */}
-      {/* SEPARATE STANDALONE MODAL WINDOWS (ALOHIDA OYNALAR) */}
-      {/* ========================================================= */}
-
-      {/* MODAL 1: ORDERS HISTORY & STATUS */}
-      {activeModal === 'orders' && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-[#111827] w-full max-w-md rounded-t-2xl sm:rounded-2xl p-5 space-y-4 border border-gray-200 dark:border-white/10 shadow-2xl animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200 max-h-[85vh] flex flex-col">
-            <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/10 pb-3 shrink-0">
-              <div className="flex items-center gap-2">
-                <Package className="w-4 h-4 text-gray-900 dark:text-white" />
-                <h3 className="text-sm font-bold text-gray-950 dark:text-white">{t('profile_modal_orders_title')}</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setActiveModal(null)}
-                className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-[#1F293D] flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white active:scale-95"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Filter Tabs */}
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0 select-none pb-1">
-              {[
-                { id: 'all', label: `${t('profile_modal_orders_all')} (${orders.length})` },
-                { id: 'delivering', label: `${t('profile_modal_orders_delivering')} (${deliveringOrdersCount})` },
-                { id: 'completed', label: `${t('profile_modal_orders_completed')} (${completedOrdersCount})` },
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic('light');
-                    setActiveOrderTab(tab.id as any);
-                  }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap active:scale-95 transition-transform ${
-                    activeOrderTab === tab.id
-                      ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-950 shadow-2xs font-bold'
-                      : 'bg-gray-100 dark:bg-[#161F30] text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-[#1F293D]'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Orders list */}
-            <div className="space-y-2.5 overflow-y-auto no-scrollbar flex-1 pr-0.5">
-              {filteredOrders.length > 0 ? (
-                filteredOrders.map((order) => (
-                  <div
-                    key={order.id}
-                    onClick={() => {
-                      triggerHaptic('medium');
-                      setSelectedOrderDetails(order);
-                    }}
-                    className="p-3 rounded-xl border border-gray-200/80 dark:border-white/10 bg-gray-50 dark:bg-[#161F30] hover:bg-gray-100/70 dark:hover:bg-[#1F293D] active:scale-[0.99] transition-all cursor-pointer space-y-2"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-gray-950 dark:text-white">{order.id}</span>
-                        <span className="text-[10px] text-gray-400">{order.date}</span>
+          <div className="flex-1 overflow-y-auto no-scrollbar p-6">
+            
+            {/* ORDERS */}
+            {activeModal === 'orders' && (
+              <div className="space-y-4">
+                {orders.length === 0 ? (
+                  <div className="text-center py-10 opacity-50">
+                    <Package className="w-12 h-12 mx-auto mb-2 text-gray-400" />
+                    <p className="text-sm font-bold">{lang === 'uz' ? 'Sizda buyurtmalar yo\'q' : 'У вас нет заказов'}</p>
+                  </div>
+                ) : (
+                  orders.map(order => (
+                    <div key={order.id} className="bg-gray-50 dark:bg-[#161F30] border border-gray-200 dark:border-white/10 rounded-2xl p-4 space-y-3">
+                      <div className="flex justify-between items-center">
+                        <div className="text-sm font-black text-gray-900 dark:text-white">{order.id}</div>
+                        <div className={`text-[10px] px-2 py-1 rounded font-bold uppercase tracking-wider ${
+                          order.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                          order.status === 'CANCELLED' ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' :
+                          'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
+                        }`}>
+                          {order.status}
+                        </div>
                       </div>
-
-                      {order.status === 'DELIVERING' ? (
-                        <span className="px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800/40 text-[10px] font-semibold flex items-center gap-1">
-                          <Truck className="w-3 h-3 text-amber-600 dark:text-amber-400" />
-                          <span>{order.statusText}</span>
-                        </span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/40 text-[10px] font-semibold flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                          <span>{order.statusText}</span>
-                        </span>
-                      )}
+                      <div className="text-xs text-gray-500 font-medium">
+                        <div>{order.date}</div>
+                        <div>{order.itemsCount} tovar - {order.total.toLocaleString()} UZS</div>
+                      </div>
+                      <div className="pt-2 border-t border-gray-200 dark:border-white/10">
+                        <button className="w-full h-10 bg-gray-900 dark:bg-white text-white dark:text-gray-950 font-bold text-xs rounded-xl hover:bg-black dark:hover:bg-gray-100 transition-all">
+                          {lang === 'uz' ? 'Elektron chekni ko\'rish' : 'Электронный чек'}
+                        </button>
+                      </div>
                     </div>
+                  ))
+                )}
+              </div>
+            )}
 
-                    <div className="flex items-center justify-between pt-1 border-t border-gray-200/60 dark:border-white/5">
-                      <div className="flex items-center gap-2">
-                        <img src={order.products[0].image} alt="" className="w-8 h-8 rounded-md object-cover bg-white dark:bg-gray-800" />
-                        <span className="text-xs text-gray-700 dark:text-gray-300 font-medium truncate max-w-[140px]">
-                          {order.products[0].name}
-                        </span>
+            {/* CASHBACK */}
+            {activeModal === 'cashback' && (
+              <div className="space-y-6">
+                <div className="bg-gradient-to-r from-emerald-600 to-teal-500 dark:from-emerald-900/50 dark:to-teal-900/50 dark:border dark:border-emerald-800/50 rounded-2xl p-6 text-white relative overflow-hidden shadow-lg">
+                  <div className="relative z-10 space-y-1">
+                    <div className="text-xs font-bold text-emerald-100">{lang === 'uz' ? 'Joriy balans' : 'Текущий баланс'}</div>
+                    <div className="text-3xl font-black tracking-tight">45,000 UZS</div>
+                  </div>
+                  <Wallet className="absolute -right-4 -bottom-4 w-32 h-32 text-white/10" />
+                </div>
+                <div className="bg-gray-50 dark:bg-[#161F30] p-4 rounded-2xl space-y-3">
+                  <h4 className="text-sm font-bold text-gray-900 dark:text-white">{lang === 'uz' ? 'Promokod kiritish' : 'Ввести промокод'}</h4>
+                  <div className="flex gap-2">
+                    <input type="text" placeholder="PROMO2026" className="flex-1 h-12 px-4 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#111827] outline-none font-bold uppercase text-gray-900 dark:text-white" />
+                    <button className="h-12 px-5 bg-gray-900 dark:bg-white text-white dark:text-gray-950 rounded-xl font-bold text-xs">
+                      {lang === 'uz' ? 'Qo\'llash' : 'Применить'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ADDRESS */}
+            {activeModal === 'address' && (
+              <div className="space-y-4">
+                {addresses.map(addr => (
+                  <div key={addr.id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-[#161F30] rounded-2xl border border-gray-200 dark:border-white/10">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-white dark:bg-[#111827] flex items-center justify-center">
+                        <MapPin className="w-5 h-5 text-gray-900 dark:text-white" />
                       </div>
-                      <span className="text-xs font-bold text-gray-950 dark:text-white">{order.total.toLocaleString()} {t('currency')}</span>
+                      <div>
+                        <div className="text-sm font-bold text-gray-900 dark:text-white">{addr.title}</div>
+                        <div className="text-xs text-gray-500 mt-0.5">{addr.address}</div>
+                      </div>
+                    </div>
+                    <button className="text-red-500 p-2"><Trash2 className="w-4 h-4" /></button>
+                  </div>
+                ))}
+                {!showAddAddress ? (
+                  <button onClick={() => setShowAddAddress(true)} className="w-full h-12 flex items-center justify-center gap-2 border-2 border-dashed border-gray-300 dark:border-white/20 rounded-2xl text-sm font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 transition-all">
+                    <Plus className="w-4 h-4" />
+                    {lang === 'uz' ? 'Yangi manzil qo\'shish' : 'Добавить новый адрес'}
+                  </button>
+                ) : (
+                  <div className="bg-gray-50 dark:bg-[#161F30] p-4 rounded-2xl space-y-3">
+                    <input autoFocus value={newAddress} onChange={e => setNewAddress(e.target.value)} placeholder={lang === 'uz' ? 'Manzilni kiriting...' : 'Введите адрес...'} className="w-full h-12 px-4 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#111827] outline-none text-sm font-medium" />
+                    <div className="flex gap-2">
+                      <button onClick={() => setShowAddAddress(false)} className="flex-1 h-10 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl text-xs font-bold">{lang === 'uz' ? 'Bekor qilish' : 'Отмена'}</button>
+                      <button onClick={() => { setAddresses([...addresses, { id: Date.now().toString(), title: 'Yangi manzil', address: newAddress }]); setShowAddAddress(false); setNewAddress(''); }} className="flex-1 h-10 bg-gray-900 dark:bg-white text-white dark:text-gray-950 rounded-xl text-xs font-bold">{lang === 'uz' ? 'Saqlash' : 'Сохранить'}</button>
                     </div>
                   </div>
-                ))
-              ) : (
-                <div className="py-10 text-center space-y-2">
-                  <PackageSearch className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto" />
-                  <div className="text-xs font-semibold text-gray-400">
-                    {lang === 'uz' ? 'Hozircha buyurtmalar mavjud emas' : 'Заказов пока нет'}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL 2: CASHBACK & PROMOCODES */}
-      {activeModal === 'wallet' && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-[#111827] w-full max-w-md rounded-t-2xl sm:rounded-2xl p-5 space-y-4 border border-gray-200 dark:border-white/10 shadow-2xl animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/10 pb-3">
-              <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
-                <Wallet className="w-4 h-4" />
-                <h3 className="text-sm font-bold text-gray-950 dark:text-white">{t('profile_modal_wallet_title')}</h3>
+                )}
               </div>
-              <button
-                type="button"
-                onClick={() => setActiveModal(null)}
-                className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-[#1F293D] flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white active:scale-95"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+            )}
 
-            {/* Balance Card */}
-            <div className="p-4 rounded-xl bg-emerald-500/10 dark:bg-emerald-950/50 border border-emerald-200/80 dark:border-emerald-800/50 space-y-1">
-              <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">{t('profile_modal_wallet_balance')}</span>
-              <div className="text-2xl font-black text-gray-950 dark:text-white">
-                0 <span className="text-sm font-normal text-gray-600 dark:text-gray-400">{t('currency')}</span>
-              </div>
-              <p className="text-[11px] text-emerald-800 dark:text-emerald-300 font-normal leading-relaxed pt-1">
-                {t('profile_modal_wallet_info')}
-              </p>
-            </div>
-
-            {/* Promo Codes */}
-            <div className="space-y-2 pt-1">
-              <label className="text-xs font-bold text-gray-950 dark:text-white block">{t('profile_modal_wallet_coupons')}</label>
-              <div className="p-3 text-center rounded-xl bg-gray-50 dark:bg-[#161F30] border border-gray-200/80 dark:border-white/10 text-xs text-gray-400">
-                {lang === 'uz' ? 'Hozircha faol promokodlar mavjud emas' : 'Активных промокодов пока нет'}
-              </div>
-            </div>
-
-            <Link
-              href="/catalog"
-              onClick={() => {
-                triggerHaptic('light');
-                setActiveModal(null);
-              }}
-              className="w-full py-2.5 bg-gray-900 dark:bg-white hover:bg-black dark:hover:bg-gray-100 text-white dark:text-gray-950 rounded-lg font-semibold text-xs flex items-center justify-center gap-2 active:scale-95 transition-transform duration-100"
-            >
-              <span>{t('go_to_catalog')}</span>
-            </Link>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL 3: SAVED ADDRESSES */}
-      {activeModal === 'addresses' && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-[#111827] w-full max-w-md rounded-t-2xl sm:rounded-2xl p-5 space-y-4 border border-gray-200 dark:border-white/10 shadow-2xl animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/10 pb-3">
-              <div className="flex items-center gap-2 text-blue-700 dark:text-blue-400">
-                <MapPin className="w-4 h-4" />
-                <h3 className="text-sm font-bold text-gray-950 dark:text-white">{t('profile_modal_address_title')}</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveModal(null);
-                  setShowAddAddressInput(false);
-                }}
-                className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-[#1F293D] flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white active:scale-95"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="space-y-2">
-              {addresses.length > 0 ? (
-                addresses.map((addr, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-[#161F30] border border-gray-200 dark:border-white/10 text-xs"
-                  >
-                    <span className="font-medium text-gray-900 dark:text-white">{addr}</span>
-                    <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/40 px-2 py-0.5 rounded-md shrink-0">
-                      {t('profile_address_main')}
-                    </span>
-                  </div>
-                ))
-              ) : (
-                <div className="p-3 text-center rounded-xl bg-gray-50 dark:bg-[#161F30] border border-gray-200/80 dark:border-white/10 text-xs text-gray-400">
-                  {lang === 'uz' ? 'Saqlangan manzillar mavjud emas' : 'Нет сохраненных адресов'}
-                </div>
-              )}
-            </div>
-
-            {showAddAddressInput ? (
-              <form onSubmit={handleAddAddress} className="space-y-2 pt-1">
-                <input
-                  type="text"
-                  autoFocus
-                  required
-                  value={newAddressInput}
-                  onChange={(e) => setNewAddressInput(e.target.value)}
-                  placeholder={t('profile_address_placeholder')}
-                  className="w-full px-3 py-2 bg-gray-50 dark:bg-[#161F30] border border-gray-200 dark:border-white/10 rounded-lg text-xs font-medium text-gray-900 dark:text-white outline-none focus:border-gray-900 dark:focus:border-white"
-                />
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowAddAddressInput(false)}
-                    className="flex-1 py-2 bg-gray-100 dark:bg-[#1F293D] text-gray-700 dark:text-gray-300 rounded-lg font-semibold text-xs active:scale-95"
-                  >
-                    {t('cancel')}
+            {/* LANGUAGE */}
+            {activeModal === 'language' && (
+              <div className="space-y-2">
+                {[
+                  { code: 'uz', name: 'O\'zbekcha' },
+                  { code: 'ru', name: 'Русский' },
+                  { code: 'en', name: 'English' }
+                ].map(l => (
+                  <button key={l.code} onClick={() => { setLanguage(l.code as any); setActiveModal(null); }} className={`w-full h-14 px-4 flex items-center justify-between rounded-2xl border-2 transition-all ${lang === l.code ? 'border-gray-900 dark:border-white bg-gray-50 dark:bg-[#161F30]' : 'border-transparent bg-gray-50 dark:bg-[#161F30] hover:border-gray-200 dark:hover:border-white/10'}`}>
+                    <span className="text-sm font-bold text-gray-900 dark:text-white">{l.name}</span>
+                    {lang === l.code && <div className="w-5 h-5 rounded-full bg-gray-900 dark:bg-white flex items-center justify-center"><Check className="w-3.5 h-3.5 text-white dark:text-gray-950 stroke-[3]" /></div>}
                   </button>
-                  <button
-                    type="submit"
-                    className="flex-1 py-2 bg-gray-900 dark:bg-white hover:bg-black dark:hover:bg-gray-100 text-white dark:text-gray-950 rounded-lg font-semibold text-xs shadow-xs active:scale-95"
-                  >
-                    {t('save')}
+                ))}
+              </div>
+            )}
+
+            {/* THEME */}
+            {activeModal === 'theme' && (
+              <div className="space-y-2">
+                {[
+                  { id: 'light', name: { uz: 'Yorug\' rejim', ru: 'Светлая', en: 'Light' }, icon: Sun },
+                  { id: 'dark', name: { uz: 'Qorong\'u rejim', ru: 'Темная', en: 'Dark' }, icon: Moon }
+                ].map(t => (
+                  <button key={t.id} onClick={() => { setTheme(t.id as any); setActiveModal(null); }} className={`w-full h-14 px-4 flex items-center justify-between rounded-2xl border-2 transition-all ${theme === t.id ? 'border-gray-900 dark:border-white bg-gray-50 dark:bg-[#161F30]' : 'border-transparent bg-gray-50 dark:bg-[#161F30] hover:border-gray-200 dark:hover:border-white/10'}`}>
+                    <div className="flex items-center gap-3">
+                      <t.icon className="w-5 h-5 text-gray-500" />
+                      <span className="text-sm font-bold text-gray-900 dark:text-white">{(t.name as any)[lang]}</span>
+                    </div>
+                    {theme === t.id && <div className="w-5 h-5 rounded-full bg-gray-900 dark:bg-white flex items-center justify-center"><Check className="w-3.5 h-3.5 text-white dark:text-gray-950 stroke-[3]" /></div>}
                   </button>
+                ))}
+              </div>
+            )}
+
+            {/* FAQ */}
+            {activeModal === 'faq' && (
+              <div className="space-y-3">
+                {[
+                  { q: 'Buyurtmani qanday bekor qilish mumkin?', a: 'Buyurtmani bekor qilish uchun Buyurtmalarim bo\'limiga o\'tib, bekor qilish tugmasini bosing.' },
+                  { q: 'Keshbek qachon tushadi?', a: 'Keshbek buyurtma holati "Tugallangan" (COMPLETED) bo\'lgandan so\'ng avtomatik hisobingizga tushadi.' },
+                  { q: 'Yetkazib berish qancha vaqt oladi?', a: 'Odatda Toshkent shahri ichida 24 soat, viloyatlarga 1-3 kun ichida yetkaziladi.' }
+                ].map((faq, i) => (
+                  <details key={i} className="group bg-gray-50 dark:bg-[#161F30] rounded-2xl border border-gray-200 dark:border-white/10 overflow-hidden cursor-pointer">
+                    <summary className="flex items-center justify-between p-4 font-bold text-sm text-gray-900 dark:text-white list-none">
+                      {faq.q}
+                      <ChevronRight className="w-5 h-5 text-gray-400 group-open:rotate-90 transition-transform" />
+                    </summary>
+                    <div className="px-4 pb-4 text-xs text-gray-600 dark:text-gray-400 leading-relaxed border-t border-gray-100 dark:border-white/5 pt-3">
+                      {faq.a}
+                    </div>
+                  </details>
+                ))}
+              </div>
+            )}
+
+            {/* SUPPORT */}
+            {activeModal === 'support' && (
+              <div className="space-y-4">
+                <div className="text-center py-6">
+                  <div className="w-16 h-16 bg-sky-100 dark:bg-sky-900/30 text-sky-500 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <HeadphonesIcon className="w-8 h-8" />
+                  </div>
+                  <h4 className="text-lg font-black text-gray-900 dark:text-white">24/7 Operator</h4>
+                  <p className="text-xs text-gray-500 mt-1">Sizga yordam berishdan xursandmiz</p>
                 </div>
-              </form>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setShowAddAddressInput(true)}
-                className="w-full py-2.5 bg-gray-100 dark:bg-[#1F293D] hover:bg-gray-200 dark:hover:bg-[#27354E] text-gray-900 dark:text-white rounded-lg font-semibold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-transform"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>{t('profile_address_add_btn')}</span>
-              </button>
+                <a href="https://t.me/example" target="_blank" rel="noreferrer" className="flex items-center justify-center gap-2 h-14 bg-sky-500 hover:bg-sky-600 text-white rounded-2xl font-bold text-sm transition-all shadow-md">
+                  <ExternalLink className="w-4 h-4" /> Telegram orqali yozish
+                </a>
+                <a href="tel:+998901234567" className="flex items-center justify-center gap-2 h-14 bg-gray-100 dark:bg-[#161F30] hover:bg-gray-200 dark:hover:bg-white/10 text-gray-900 dark:text-white rounded-2xl font-bold text-sm transition-all">
+                  +998 (90) 123-45-67
+                </a>
+              </div>
             )}
           </div>
         </div>
-      )}
+      </div>
+    );
+  };
 
-      {/* MODAL 4: LANGUAGE SELECTION */}
-      {activeModal === 'language' && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-[#111827] w-full max-w-md rounded-t-2xl sm:rounded-2xl p-5 space-y-4 border border-gray-200 dark:border-white/10 shadow-2xl animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/10 pb-3">
-              <div className="flex items-center gap-2">
-                <Globe className="w-4 h-4 text-gray-900 dark:text-white" />
-                <h3 className="text-sm font-bold text-gray-950 dark:text-white">{t('profile_modal_lang_title')}</h3>
+  return (
+    <div className="min-h-screen bg-[#FAFAFA] dark:bg-[#0B0F17] pb-24">
+      <div className="max-w-md mx-auto p-4 sm:p-6 space-y-6">
+        
+        {/* 1. PERSONAL CARD */}
+        <div className="bg-white dark:bg-[#111827] rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-white/5 flex items-center gap-4">
+          <div className="relative">
+            <div className="w-16 h-16 rounded-full p-[2px] bg-gradient-to-tr from-emerald-500 to-teal-400 shrink-0">
+              <div className="w-full h-full rounded-full bg-white dark:bg-[#111827] p-0.5">
+                {user?.photo_url ? (
+                  <img src={user.photo_url} alt="avatar" className="w-full h-full rounded-full object-cover" />
+                ) : (
+                  <div className="w-full h-full rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-xl font-black text-emerald-600">
+                    {(user?.first_name || 'U').charAt(0)}
+                  </div>
+                )}
               </div>
-              <button
-                type="button"
-                onClick={() => setActiveModal(null)}
-                className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-[#1F293D] flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white active:scale-95"
-              >
-                <X className="w-4 h-4" />
-              </button>
             </div>
+            <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center border-2 border-white dark:border-[#111827]">
+              <BadgeCheck className="w-3.5 h-3.5" />
+            </div>
+          </div>
+          <div>
+            <h1 className="text-lg font-black text-gray-900 dark:text-white tracking-tight">
+              {user?.first_name} {user?.last_name}
+            </h1>
+            <p className="text-xs font-bold text-gray-400 mt-0.5">
+              {user?.username ? `@${user.username}` : (user as any)?.phone || 'Tasdiqlangan xaridor'}
+            </p>
+          </div>
+        </div>
 
-            <div className="space-y-2">
-              {[
-                { id: 'uz', label: "O'zbek tili", flag: '🇺🇿' },
-                { id: 'ru', label: 'Русский язык', flag: '🇷🇺' },
-                { id: 'en', label: 'English', flag: '🇬🇧' },
-              ].map((item) => (
+        {/* 2. MENU GROUPS */}
+        <div className="space-y-4">
+          {menuGroups.map((group, gIdx) => (
+            <div key={gIdx} className="bg-white dark:bg-[#111827] rounded-3xl shadow-sm border border-gray-100 dark:border-white/5 overflow-hidden">
+              {group.items.map((item, iIdx) => (
                 <button
                   key={item.id}
-                  type="button"
-                  onClick={() => {
-                    changeLang(item.id as any);
-                    setActiveModal(null);
-                  }}
-                  className={`w-full p-3 rounded-xl border text-xs font-semibold flex items-center justify-between transition-all active:scale-95 ${
-                    lang === item.id
-                      ? 'bg-gray-900 dark:bg-white border-gray-900 dark:border-white text-white dark:text-gray-950 shadow-xs font-bold'
-                      : 'bg-gray-50 dark:bg-[#161F30] border-gray-200 dark:border-white/10 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#1F293D]'
-                  }`}
+                  onClick={() => setActiveModal(item.id as any)}
+                  className={`w-full px-5 py-4 flex items-center justify-between transition-all hover:bg-gray-50 dark:hover:bg-white/5 ${iIdx !== group.items.length - 1 ? 'border-b border-gray-100 dark:border-white/5' : ''}`}
                 >
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-base">{item.flag}</span>
-                    <span>{item.label}</span>
+                  <div className="flex items-center gap-4">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${item.bg} ${item.color}`}>
+                      <item.icon className="w-5 h-5" />
+                    </div>
+                    <span className="text-sm font-bold text-gray-900 dark:text-white">{(item.label as any)[lang]}</span>
                   </div>
-                  {lang === item.id && <Check className="w-4 h-4 stroke-[2.5]" />}
+                  <ChevronRight className="w-5 h-5 text-gray-300 dark:text-gray-600" />
                 </button>
               ))}
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL 5: THEME SELECTION */}
-      {activeModal === 'theme' && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-[#111827] w-full max-w-md rounded-t-2xl sm:rounded-2xl p-5 space-y-4 border border-gray-200 dark:border-white/10 shadow-2xl animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/10 pb-3">
-              <div className="flex items-center gap-2">
-                <Sun className="w-4 h-4 text-amber-500" />
-                <h3 className="text-sm font-bold text-gray-950 dark:text-white">{t('profile_modal_theme_title')}</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setActiveModal(null)}
-                className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-[#1F293D] flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white active:scale-95"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2.5">
-              <button
-                type="button"
-                onClick={() => {
-                  triggerHaptic('light');
-                  setThemeMode('light');
-                  setActiveModal(null);
-                }}
-                className={`p-4 rounded-xl border text-center space-y-2 transition-all active:scale-95 ${
-                  themeMode === 'light'
-                    ? 'bg-gray-900 dark:bg-white border-gray-900 dark:border-white text-white dark:text-gray-950 shadow-xs font-bold'
-                    : 'bg-gray-50 dark:bg-[#161F30] border-gray-200 dark:border-white/10 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#1F293D]'
-                }`}
-              >
-                <Sun className="w-6 h-6 mx-auto text-amber-500" />
-                <div className="text-xs font-bold">{t('profile_modal_theme_light')}</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  triggerHaptic('light');
-                  setThemeMode('dark');
-                  setActiveModal(null);
-                }}
-                className={`p-4 rounded-xl border text-center space-y-2 transition-all active:scale-95 ${
-                  themeMode === 'dark'
-                    ? 'bg-gray-900 dark:bg-white border-gray-900 dark:border-white text-white dark:text-gray-950 shadow-xs font-bold'
-                    : 'bg-gray-50 dark:bg-[#161F30] border-gray-200 dark:border-white/10 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#1F293D]'
-                }`}
-              >
-                <Moon className="w-6 h-6 mx-auto text-purple-400" />
-                <div className="text-xs font-bold">{t('profile_modal_theme_dark')}</div>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL 6: FAQ MODAL */}
-      {activeModal === 'faq' && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-[#111827] w-full max-w-md rounded-t-2xl sm:rounded-2xl p-5 space-y-4 border border-gray-200 dark:border-white/10 shadow-2xl animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200 max-h-[85vh] flex flex-col">
-            <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/10 pb-3 shrink-0">
-              <div className="flex items-center gap-2">
-                <HelpCircle className="w-4 h-4 text-gray-900 dark:text-white" />
-                <h3 className="text-sm font-bold text-gray-950 dark:text-white">{t('profile_modal_faq_title')}</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setActiveModal(null)}
-                className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-[#1F293D] flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white active:scale-95"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="divide-y divide-gray-100 dark:divide-white/10 overflow-y-auto no-scrollbar flex-1 pr-0.5">
-              {faqs.map((faq, index) => {
-                const isOpen = openFaqIndex === index;
-                return (
-                  <div key={index} className="py-3">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        triggerHaptic('light');
-                        setOpenFaqIndex(isOpen ? null : index);
-                      }}
-                      className="w-full flex items-center justify-between gap-3 text-left font-semibold text-xs text-gray-900 dark:text-white hover:text-black dark:hover:text-gray-200 active:scale-[0.99]"
-                    >
-                      <span>{faq.q[lang] || faq.q.uz}</span>
-                      <ChevronDown
-                        className={`w-4 h-4 text-gray-400 shrink-0 transition-transform duration-200 ${
-                          isOpen ? 'rotate-180 text-gray-950 dark:text-white' : ''
-                        }`}
-                      />
-                    </button>
-                    {isOpen && (
-                      <p className="mt-2 text-xs text-gray-600 dark:text-gray-400 font-normal leading-relaxed animate-in fade-in duration-200">
-                        {faq.a[lang] || faq.a.uz}
-                      </p>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            <a
-              href="https://t.me/menejer_aloqa"
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => triggerHaptic('medium')}
-              className="w-full py-2.5 bg-gray-900 dark:bg-white hover:bg-black dark:hover:bg-gray-100 text-white dark:text-gray-950 rounded-lg font-semibold text-xs flex items-center justify-center gap-2 active:scale-95 shrink-0"
-            >
-              <MessageCircle className="w-4 h-4" />
-              <span>{t('profile_modal_faq_ask_btn')}</span>
-            </a>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL 7: ORDER DETAILS CHEQUE MODAL */}
-      {selectedOrderDetails && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-[#111827] w-full max-w-md rounded-t-2xl sm:rounded-2xl p-5 space-y-4 border border-gray-200 dark:border-white/10 shadow-2xl animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200 max-h-[85vh] overflow-y-auto no-scrollbar">
-            <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/10 pb-3">
-              <div>
-                <h3 className="text-sm font-bold text-gray-950 dark:text-white">{t('profile_order_details_title')} {selectedOrderDetails.id}</h3>
-                <span className="text-[11px] text-gray-400">{selectedOrderDetails.date}</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedOrderDetails(null)}
-                className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-[#1F293D] flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white active:scale-95"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Status Info */}
-            <div className="p-3 rounded-xl bg-gray-50 dark:bg-[#161F30] border border-gray-200/80 dark:border-white/10 flex items-center justify-between">
-              <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">{t('profile_order_status_label')}</span>
-              <span className="text-xs font-bold text-gray-950 dark:text-white">{selectedOrderDetails.statusText}</span>
-            </div>
-
-            {/* Products List */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-gray-950 dark:text-white block">Buyurtma tarkibi:</label>
-              {selectedOrderDetails.products.map((prod, idx) => (
-                <div key={idx} className="flex items-center gap-3 p-2 rounded-xl bg-gray-50 dark:bg-[#161F30] border border-gray-200/60 dark:border-white/10">
-                  <img src={prod.image} alt={prod.name} className="w-12 h-12 rounded-lg object-cover bg-white dark:bg-gray-800" />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-semibold text-gray-900 dark:text-white truncate">{prod.name}</div>
-                    <div className="text-[11px] text-gray-500 dark:text-gray-400">{prod.qty} {t('pcs')} × {prod.price.toLocaleString()} {t('currency')}</div>
-                  </div>
-                  <div className="text-xs font-bold text-gray-950 dark:text-white">{(prod.qty * prod.price).toLocaleString()} {t('currency')}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* Delivery & Payment details */}
-            <div className="space-y-1.5 text-xs text-gray-600 dark:text-gray-400 border-t border-gray-100 dark:border-white/10 pt-3">
-              <div className="flex justify-between">
-                <span>{t('profile_order_method_label')}</span>
-                <span className="font-semibold text-gray-900 dark:text-white">{selectedOrderDetails.deliveryType}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>{t('profile_order_address_label')}</span>
-                <span className="font-semibold text-gray-900 dark:text-white text-right max-w-[200px]">{selectedOrderDetails.address}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>{t('profile_order_payment_label')}</span>
-                <span className="font-semibold text-gray-900 dark:text-white">{selectedOrderDetails.paymentMethod}</span>
-              </div>
-              <div className="flex justify-between pt-2 border-t border-gray-100 dark:border-white/10 text-sm font-bold text-gray-950 dark:text-white">
-                <span>{t('cart_total')}</span>
-                <span>{selectedOrderDetails.total.toLocaleString()} {t('currency')}</span>
-              </div>
-            </div>
-
+          ))}
+          
+          {/* NOTIFICATIONS (Standalone Checkbox item) */}
+          <div className="bg-white dark:bg-[#111827] rounded-3xl shadow-sm border border-gray-100 dark:border-white/5 overflow-hidden">
             <button
-              type="button"
-              onClick={() => setSelectedOrderDetails(null)}
-              className="w-full py-2.5 bg-gray-900 dark:bg-white hover:bg-black dark:hover:bg-gray-100 text-white dark:text-gray-950 rounded-lg font-semibold text-xs active:scale-95"
+              onClick={handleNotifToggle}
+              className="w-full px-5 py-4 flex items-center justify-between transition-all hover:bg-gray-50 dark:hover:bg-white/5"
             >
-              {t('close')}
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-orange-50 dark:bg-orange-500/10 text-orange-500">
+                  <Bell className="w-5 h-5" />
+                </div>
+                <div className="text-left">
+                  <div className="text-sm font-bold text-gray-900 dark:text-white">
+                    {lang === 'uz' ? 'Bildirishnomalar' : 'Уведомления'}
+                  </div>
+                  <div className="text-[10px] text-gray-400 font-medium">Telegram bot orqali</div>
+                </div>
+              </div>
+              
+              {/* Checkbox Design standard */}
+              <div className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${
+                notifEnabled 
+                  ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-950' 
+                  : 'bg-gray-200 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-700'
+              }`}>
+                {notifEnabled && <Check className="w-4 h-4 stroke-[3]" />}
+              </div>
             </button>
           </div>
         </div>
-      )}
 
-      {/* MODAL 8: NOTIFICATION TURN-OFF CONFIRMATION MODAL */}
-      {showNotifConfirmModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-[#111827] w-full max-w-md rounded-t-2xl sm:rounded-2xl p-5 space-y-4 border border-gray-200 dark:border-white/10 shadow-2xl animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/10 pb-3">
-              <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
-                <BellOff className="w-4 h-4" />
-                <h3 className="text-sm font-bold text-gray-950 dark:text-white">{t('profile_notif_modal_title')}</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowNotifConfirmModal(false)}
-                className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-[#1F293D] flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white active:scale-95"
-              >
-                <X className="w-4 h-4" />
-              </button>
+      </div>
+
+      {/* RENDER ACTIVE DRAWER */}
+      {renderDrawer()}
+
+      {/* NOTIFICATIONS DISABLE CONFIRMATION DIALOG */}
+      {showNotifDialog && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowNotifDialog(false)} />
+          <div className="relative w-full max-w-xs bg-white dark:bg-[#111827] rounded-3xl p-6 text-center space-y-5 animate-in zoom-in-95 duration-200 shadow-2xl">
+            <div className="w-16 h-16 rounded-full bg-red-50 dark:bg-red-950/30 text-red-500 flex items-center justify-center mx-auto">
+              <AlertTriangle className="w-8 h-8" />
             </div>
-
-            <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/40 text-xs text-amber-900 dark:text-amber-200 leading-relaxed font-medium">
-              {t('profile_notif_modal_desc')}
+            <div>
+              <h3 className="text-lg font-black text-gray-950 dark:text-white">Haqiqatan ham o'chirmoqchimisiz?</h3>
+              <p className="text-xs text-gray-500 mt-2 leading-relaxed">
+                Diqqat! Bildirishnomalarni o'chirsangiz, buyurtma holatlari, yangi chegirmalar va keshbeklar haqidagi ma'lumotlar sizga yetib bormaydi.
+              </p>
             </div>
-
-            <div className="space-y-2 pt-1">
-              <button
-                type="button"
-                onClick={() => {
-                  triggerHaptic('light');
-                  setShowNotifConfirmModal(false);
-                }}
-                className="w-full py-2.5 bg-gray-900 dark:bg-white hover:bg-black dark:hover:bg-gray-100 text-white dark:text-gray-950 rounded-lg font-semibold text-xs active:scale-95 transition-transform duration-100"
-              >
-                {t('profile_notif_modal_keep')}
+            <div className="grid grid-cols-2 gap-2 pt-2">
+              <button onClick={() => setShowNotifDialog(false)} className="h-12 bg-gray-100 dark:bg-[#161F30] text-gray-900 dark:text-white rounded-xl font-bold text-xs hover:bg-gray-200 dark:hover:bg-white/10 transition-all">
+                Yo'q, qolsin
               </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  triggerHaptic('medium');
-                  setNotificationsEnabled(false);
-                  try {
-                    localStorage.setItem('telegram_notifications', 'false');
-                  } catch (e) {}
-                  setShowNotifConfirmModal(false);
-                }}
-                className="w-full py-2.5 bg-gray-100 dark:bg-[#1F293D] hover:bg-gray-200 dark:hover:bg-[#27354E] text-red-600 dark:text-red-400 rounded-lg font-semibold text-xs active:scale-95 transition-transform duration-100"
-              >
-                {t('profile_notif_modal_turn_off')}
+              <button onClick={confirmDisableNotif} className="h-12 bg-red-500 text-white rounded-xl font-bold text-xs hover:bg-red-600 transition-all shadow-md">
+                Ha, o'chirish
               </button>
             </div>
           </div>
         </div>
       )}
+
     </div>
   );
 }

@@ -63,10 +63,10 @@ export function ProductCard({ product }: ProductCardProps) {
   };
 
   return (
-    <div className="group bg-white dark:bg-[#111827] rounded-2xl border border-gray-200/80 dark:border-white/10 overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
+    <div className="group bg-white dark:bg-[#111827] rounded-xl border border-gray-200/70 dark:border-white/10 overflow-hidden shadow-sm bg-white dark:bg-[#111827] hover:shadow-md hover:-translate-y-0.5 transition-all flex flex-col justify-between">
       <Link href={`/product/${product.id}`} className="block">
         {/* Image Container with Badges & Wishlist */}
-        <div className="aspect-square w-full relative overflow-hidden bg-gray-50 dark:bg-[#161F30]">
+        <div className="aspect-square w-full relative overflow-hidden rounded-lg bg-gray-50 dark:bg-[#161F30]">
           <img
             src={imageSrc}
             alt={getTitle()}
@@ -114,7 +114,7 @@ export function ProductCard({ product }: ProductCardProps) {
 
           {/* Price Row */}
           <div>
-            <div className="text-sm font-black text-gray-950 dark:text-white">
+            <div className="text-base font-bold text-gray-950 dark:text-white">
               {basePrice.toLocaleString()} <span className="text-[10px] font-semibold text-gray-400">UZS</span>
             </div>
             {hasDiscount && (

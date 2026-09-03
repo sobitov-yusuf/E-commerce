@@ -1,149 +1,117 @@
-# Universal Telegram Mini App (TMA) E-Commerce — Telegram Bot va Mini App Integratsiyasi
+# Universal E-Commerce Platformasi (TMA & Web) — Telegram Bot va Mini App Integratsiya Hujjati
 
 ---
 
-## 📌 Hujjat Qoidalari: Ushbu Hujjatda Nimalar Turadi va Nimalar Turmaydi? (Scope & Boundaries)
+## 📌 Hujjat Qoidalari: Ushbu Hujjatning Vazifasi va Chegaralari (Scope & Boundaries)
+
+Ushbu hujjat platformaning **Telegram ekotizimi bilan integratsiyasi** — Mini App SDK, Bot API xabarnomalari, autentifikatsiya va xavfsizlik mexanizmlarini batafsil belgilaydi.
 
 ### ✅ Ushbu Hujjatda Nimalar Turadi (In-Scope)?
-1. **`@telegram-apps/sdk` Native Integratsiyasi:** Viewport Expansion, HapticFeedback, MainButton, BackButton va CloudStorage.
-2. **Local Development Mocking UI Wrapper:** Localhost brauzerida Mini App muhitini simulyatsiya qilish (`TelegramProvider.tsx`).
-3. **Telegram Auth & HMAC Security:** `initData` ni HMAC SHA-256 va `auth_date` orqali serverda tekshirish algoritmi kodi.
-4. **Telegram Contact Sharing (`requestContact`):** 1-klikda tasdiqlangan telefon raqamini olish va saqlash.
-5. **Deep Linking (`startapp`):** `t.me/bot/app?startapp=prod_123` formati va Telegram qoidalariga mos regex validation.
-6. **Telegram Bot API Xabarnomalari:** Admin va Mijoz (status o'zgarganda) uchun bot xabarnomasi shablonlari.
+1. **`@telegram-apps/sdk` Native Integratsiyasi:** Viewport Expansion, HapticFeedback, BackButton va CloudStorage.
+2. **TelegramProvider Arxitekturasi:** TMA va Web brauzer uchun yagona kontekst provayderi.
+3. **Ikki Tomonlama Autentifikatsiya:** TMA `initData` HMAC-SHA256 va Web brauzer Telegram Login Widget.
+4. **Telegram Contact Sharing:** 1-klikda tasdiqlangan telefon raqamini olish.
+5. **Deep Linking (`startapp`):** Mahsulot va toifaga to'g'ridan-to'g'ri havola formatiga moslash.
+6. **Bot API Xabarnomalari:** Admin va Xaridorga avtomatik 3 tildagi buyurtma xabarlari va elektron kvitansiya.
 
 ### ❌ Ushbu Hujjatda Nimalar Turmaydi (Out-of-Scope)?
-1. **Biznes PRD Talablari:** Loyiha maqsadi va foydalanuvchi rollari **[1_Talablar_PRD.md](file:///c:/Users/HP/Desktop/Telegram%20Mini%20App/docs/1_Talablar_PRD.md)** da turadi.
-2. **PostgreSQL / Prisma DB Sxemalari:** Baza jadvallari va SQL indekslari **[2_Texnik_Arxitektura.md](file:///c:/Users/HP/Desktop/Telegram%20Mini%20App/docs/2_Texnik_Arxitektura.md)** da turadi.
-3. **Dizayn Rang Tokenlari va CSS:** Hex ranglar va shriftlar **[4_UI_UX_Dizayn_Tizimi.md](file:///c:/Users/HP/Desktop/Telegram%20Mini%20App/docs/4_UI_UX_Dizayn_Tizimi.md)** da turadi.
-4. **Sprint Rejalari:** Ish muddati va topshiriqlar jurnali **[5_Roadmap.md](file:///c:/Users/HP/Desktop/Telegram%20Mini%20App/docs/5_Roadmap.md)** da turadi.
+1. **Biznes Talablari va Sahifalar:** [1_Talablar_PRD.md](file:///c:/Users/HP/Desktop/Telegram%20Mini%20App/docs/1_Talablar_PRD.md) da yoritiladi.
+2. **PostgreSQL / Prisma DB:** [2_Texnik_Arxitektura.md](file:///c:/Users/HP/Desktop/Telegram%20Mini%20App/docs/2_Texnik_Arxitektura.md) da yoritiladi.
+3. **UI Dizayn Tokenlari:** [4_UI_UX_Dizayn_Tizimi.md](file:///c:/Users/HP/Desktop/Telegram%20Mini%20App/docs/4_UI_UX_Dizayn_Tizimi.md) da yoritiladi.
+4. **Sprint Rejalari:** [5_Roadmap.md](file:///c:/Users/HP/Desktop/Telegram%20Mini%20App/docs/5_Roadmap.md) da yoritiladi.
 
 ---
 
-## 1. `@telegram-apps/sdk` Integratsiyasi va Native UI
+## 1. `@telegram-apps/sdk` Native Integratsiyasi
 
-Telegram Mini App ilovasi foydalanuvchiga xuddi iOS/Android native ilovasi kabi silliq va sifatli tajriba berishi uchun `@telegram-apps/sdk` kutubxonasidan foydalaniladi.
+Telegram Mini App (TMA) foydalanuvchiga xuddi iOS/Android ilovasi kabi silliq tajriba berishi uchun `@telegram-apps/sdk` v2.x kutubxonasidan foydalaniladi.
 
-### 🔹 Asosiy Native Funksiyalar:
-* **Viewport Expansion:** Mini App ochilishi bilan `postEvent('web_app_expand')` orqali to'liq ekranga yoziladi.
-* **ThemeParams Sync:** Telegram mavzusiga (Light/Dark mode va rang kodlariga) avtomatik moslashish.
-* **HapticFeedback (Vibratsiya signalizatsiyasi):**
-  * `impactOccurred('light' | 'medium' | 'heavy')` — Savatga mahsulot qo'shganda yoki miqdorini oshirganda tactile javob berish.
-  * `notificationOccurred('success' | 'error')` — Buyurtma muvaffaqiyatli tasdiqlanganda vibratsiya.
-* **MainButton (Asosiy pastki tugma):** Buyurtma berish sahifasida Telegram'ning native pastki yashil tugmasidan foydalanish (`MainButton.setText('Buyurtma berish')`).
-* **BackButton (Orqaga tugmasi):** Ichki sahifalarga kirganda Telegram ilovasining yuqori chap burchagidagi orqaga tugmasini avtomatik ko'rsatish va bosh sahifada yashirish.
-* **CloudStorage:** Foydalanuvchi tanlagan til (Uz/Ru/En) va mavzuni `Telegram.WebApp.CloudStorage` orqali foydalanuvchi Telegram akkauntida saqlash.
+### Asosiy Native Funksiyalar:
+
+| Funksiya | Maqsadi | Qo'llanilishi |
+|----------|---------|---------------|
+| **Viewport Expansion** | Mini App ochilishi bilan to'liq ekranga yozish | `postEvent('web_app_expand')` |
+| **ThemeParams Sync** | Telegram mavzusiga (Light/Dark) avtomatik moslashish | Rang kodlarini o'qish va qo'llash |
+| **HapticFeedback** | Vibratsiya orqali tegishli (tactile) javob berish | Savatga qo'shish: `impact('light')`, Buyurtma: `notification('success')` |
+| **BackButton** | Telegram yuqori chap orqaga tugmasini boshqarish | Ichki sahifalarda ko'rsatish, bosh sahifada yashirish |
+| **ClosingConfirmation** | Xaridor tasodifan ilovani yopishining oldini olish | `enableClosingConfirmation()` |
+| **CloudStorage** | Foydalanuvchi sozlamalarini Telegram bulutida saqlash | Til va mavzu tanlovini eslab qolish |
 
 ---
 
-## 2. Local Development & Web Fallback Wrapper (`TelegramProvider.tsx`)
+## 2. TelegramProvider — Yagona Kontekst Provayderi
 
-Mini App Telegram ichidan tashqarida (masalan `http://localhost:3000` yoki oddiy veb-brauzerda) ochilganda hech qanday runtime error bermasligi va ishlab turishi uchun xavfsiz `TelegramProvider` va `useTelegram` hooki yaratilgan:
+`TelegramProvider` (`src/components/telegram/TelegramProvider.tsx`) — platformaning markaziy autentifikatsiya va Telegram SDK boshqaruvchisi. U **ikkala muhitda** (TMA va Web brauzer) xatosiz ishlaydi:
 
-```typescript
-'use client';
+### Arxitektura Diagrammasi:
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { useThemeStore } from '@/store/useThemeStore';
-
-interface TelegramUser {
-  id: number;
-  first_name: string;
-  last_name?: string;
-  username?: string;
-  language_code?: string;
-}
-
-interface TelegramContextType {
-  webApp: any;
-  user: TelegramUser | null;
-  isReady: boolean;
-  haptic: {
-    impact: (style?: 'light' | 'medium' | 'heavy' | 'rigid' | 'soft') => void;
-    notification: (type?: 'error' | 'success' | 'warning') => void;
-    selection: () => void;
-  };
-}
-
-export function TelegramProvider({ children }: { children: React.ReactNode }) {
-  const [webApp, setWebApp] = useState<any>(null);
-  const [user, setUser] = useState<TelegramUser | null>(null);
-  const [isReady, setIsReady] = useState(false);
-
-  useEffect(() => {
-    try {
-      useThemeStore.getState().initializeTheme();
-
-      if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp) {
-        const tg = (window as any).Telegram.WebApp;
-        if (typeof tg.ready === 'function') tg.ready();
-        if (typeof tg.expand === 'function') tg.expand();
-        if (typeof tg.enableClosingConfirmation === 'function') tg.enableClosingConfirmation();
-
-        setWebApp(tg);
-        setUser(tg.initDataUnsafe?.user || {
-          id: 7890123,
-          first_name: 'Alisher',
-          last_name: 'Zokirov',
-          username: 'alisher_z',
-          language_code: 'uz',
-        });
-      } else {
-        // Web Brauzer Fallback
-        setUser({
-          id: 7890123,
-          first_name: 'Alisher',
-          last_name: 'Zokirov',
-          username: 'alisher_z',
-          language_code: 'uz',
-        });
-      }
-    } catch (e) {
-      console.error('TelegramProvider setup error:', e);
-    } finally {
-      setIsReady(true);
-    }
-  }, []);
-
-  const haptic = {
-    impact: (style = 'light') => {
-      try { webApp?.HapticFeedback?.impactOccurred(style); } catch (e) {}
-    },
-    notification: (type = 'success') => {
-      try { webApp?.HapticFeedback?.notificationOccurred(type); } catch (e) {}
-    },
-    selection: () => {
-      try { webApp?.HapticFeedback?.selectionChanged(); } catch (e) {}
-    },
-  };
-
-  return (
-    <TelegramContext.Provider value={{ webApp, user, isReady, haptic }}>
-      {children}
-    </TelegramContext.Provider>
-  );
-}
-
-export const useTelegram = () => useContext(TelegramContext);
+```
+┌─────────────────────────────────────────────────────────┐
+│                   TelegramProvider                       │
+│                                                          │
+│  ┌──────────────────┐    ┌──────────────────────────┐   │
+│  │ TMA muhitimi?     │    │ Web brauzer muhitimi?    │   │
+│  │ (initData mavjud) │    │ (initData yo'q)          │   │
+│  └────────┬─────────┘    └──────────┬───────────────┘   │
+│           │                          │                    │
+│           ▼                          ▼                    │
+│  [initData HMAC tekshiruv]  [localStorage dan sessiya]   │
+│  POST /api/auth             yoki TelegramLoginModal      │
+│           │                          │                    │
+│           ▼                          ▼                    │
+│      ┌────────────────────────────────┐                  │
+│      │  user, token, isAuthenticated  │                  │
+│      │  isTelegramWebApp, haptic      │                  │
+│      │  loginWithWeb(), logout()      │                  │
+│      └────────────────────────────────┘                  │
+│                                                          │
+│  ──► React Context orqali barcha komponentlarga uzatiladi│
+└─────────────────────────────────────────────────────────┘
 ```
 
+### Kontekst Maydonlari:
+
+| Maydon | Turi | Izoh |
+|--------|------|------|
+| `webApp` | any | Telegram WebApp SDK obyekti (brauzerda `null`) |
+| `user` | TelegramUser ǀ null | Hozirgi foydalanuvchi ma'lumotlari |
+| `isReady` | boolean | Provayder ishga tushganmi? |
+| `isTelegramWebApp` | boolean | Telegram ichidan ochilganmi? |
+| `isAuthenticated` | boolean | Foydalanuvchi tizimga kirganmi? |
+| `token` | string ǀ null | JWT sessiya tokeni |
+| `showAuthModal` | boolean | Web login modali ochiqmi? |
+| `loginWithWeb()` | function | Web brauzerdan kirish |
+| `logout()` | function | Tizimdan chiqish |
+| `haptic` | object | `impact()`, `notification()`, `selection()` |
+
+### Muhim Qoida — Sof 0-Holat:
+Web brauzerda Telegram `initData` topilmasa va `localStorage` da saqlangan sessiya bo'lmasa, foydalanuvchi `null` holatida qoladi va `TelegramLoginModal` ko'rsatiladi. **Hech qanday soxta test foydalanuvchi avtomatik yaratilmaydi.**
+
 ---
 
-## 3. Telegram Auth va HMAC `initData` Xavfsizlik Tekshiruvi
+## 3. Ikki Tomonlama Autentifikatsiya Tizimi
 
-Telegram Mini App ochilganda `window.Telegram.WebApp.initData` matnini uzatadi. Server ushbu ma'lumotning haqiqiyligini tekshirmasdan turib foydalanuvchiga ruxsat bermasligi shart. Seans eskirishi (Replay Attack) himoyasi uchun `auth_date` maksimal **1-2 soat (3600-7200 soniya)** bilan cheklanadi.
+### 3.1. TMA Autentifikatsiya (Telegram Mini App Ichidan)
 
-### 🛡️ HMAC-SHA256 Tekshiruv Algoritmi (TypeScript):
+Xaridor Telegram ichidagi do'kon tugmasini bosganda:
+1. Telegram `initData` matnini ilovaga uzatadi.
+2. Ilova `POST /api/auth` ga `initData` ni yuboradi.
+3. Server HMAC-SHA256 imzo tekshiruvi va `auth_date` yangiligini tekshiradi.
+4. Muvaffaqiyatli bo'lsa, JWT token va foydalanuvchi ma'lumotlari qaytariladi.
+
+**HMAC-SHA256 Algoritmi (`src/lib/telegram.ts`):**
 
 ```typescript
-import crypto from 'crypto';
-
-export function verifyTelegramInitData(initDataRaw: string, botToken: string): { isValid: boolean; user?: any } {
+export function verifyTelegramInitData(
+  initDataRaw: string,
+  botToken: string,
+  maxAgeSeconds: number = 7200 // Maksimal 2 soat
+): TelegramAuthResult {
   const urlParams = new URLSearchParams(initDataRaw);
   const hash = urlParams.get('hash');
   urlParams.delete('hash');
 
-  // 1. Kalitlarni alfabit bo'yicha tartiblash va data-check-string tuzish
+  // 1. Kalitlarni alfabit bo'yicha tartiblash
   const params: string[] = [];
   for (const [key, value] of urlParams.entries()) {
     params.push(`${key}=${value}`);
@@ -151,73 +119,186 @@ export function verifyTelegramInitData(initDataRaw: string, botToken: string): {
   params.sort();
   const dataCheckString = params.join('\n');
 
-  // 2. Secret Key yaratish: HMAC-SHA256("WebAppData", botToken)
+  // 2. Secret Key: HMAC-SHA256("WebAppData", botToken)
   const secretKey = crypto
     .createHmac('sha256', 'WebAppData')
     .update(botToken)
     .digest();
 
-  // 3. Hisoblangan hash bilan Telegram hash'ini solishtirish
+  // 3. Imzoni solishtirish
   const calculatedHash = crypto
     .createHmac('sha256', secretKey)
     .update(dataCheckString)
     .digest('hex');
 
-  if (calculatedHash !== hash) {
-    return { isValid: false };
-  }
+  if (calculatedHash !== hash) return { isValid: false };
 
-  // 4. auth_date vaqtini tekshirish (Replay Attack himoyasi - Max 2 soat / 7200 sec)
+  // 4. auth_date tekshiruvi (Replay Attack himoyasi)
   const authDate = parseInt(urlParams.get('auth_date') || '0', 10);
   const now = Math.floor(Date.now() / 1000);
-  if (now - authDate > 7200) {
-    return { isValid: false };
-  }
+  if (now - authDate > maxAgeSeconds) return { isValid: false };
 
   const user = JSON.parse(urlParams.get('user') || '{}');
   return { isValid: true, user };
 }
 ```
 
----
+### 3.2. Web Brauzer Autentifikatsiya (Telegram Login Widget)
 
-## 4. Telegram Contact Sharing (`requestContact`) va Web Fallback
+Kompyuter yoki telefon brauzeridan kirgan foydalanuvchi uchun:
+1. Do'kon bosh sahifasida `[ ✈️ Telegram orqali kirish ]` tugmasi ko'rinadi.
+2. Tugma bosilganda `TelegramLoginModal` (`src/components/auth/TelegramLoginModal.tsx`) ochiladi.
+3. Foydalanuvchi Telegram botga o'tib, 1-klikda avtorizatsiya beradi.
+4. Bot orqali qaytgan ma'lumotlar `POST /api/auth/web` ga yuboriladi.
+5. Server `verifyTelegramWebAuth()` funksiyasi orqali SHA-256 imzoni tekshiradi.
+6. Muvaffaqiyatli bo'lsa, JWT token beriladi va sessiya `localStorage` ga saqlanadi.
 
-Mijoz telefon raqamini qo'lda yozib o'tirmasligi uchun Telegram'dan 1-klikda avtomatik olinadi:
-1. **Telegram Muhitida:** Checkout sahifasida "📱 Telegram raqamimni ulashish" tugmasi ko'rinadi.
-2. Tugma bosilganda Telegram native `requestContact()` muloqot oynasi ochiladi.
-3. Mijoz tasdiqlagach, verified telefon raqami avtomatik ravishda buyurtma formasiga tushadi va foydalanuvchi profiliga biriktiriladi.
-4. **Desktop / Web Fallback:** Agar foydalanuvchi ilovani oddiy brauzerda ochgan bo'lsa yoki Telegram muloqotini rad etsa, avtomatik ravishda qo'lda telefon raqam kiritish inputi (`+998 (XX) XXX-XX-XX`) ochiladi. Hech qanday xatolik yuz bermaydi.
+**Web Login HMAC Tekshiruvi:**
 
----
+```typescript
+export function verifyTelegramWebAuth(
+  data: Record<string, any>,
+  botToken: string,
+  maxAgeSeconds: number = 86400 // 24 soat
+): TelegramAuthResult {
+  const { hash, ...rest } = data;
+  const sortedKeys = Object.keys(rest).sort();
+  const dataCheckString = sortedKeys.map((key) => `${key}=${rest[key]}`).join('\n');
 
-## 5. Deep Linking va Mahsulot Ulashish (Share Product)
+  // Web login uchun: SHA256(botToken) secret key sifatida ishlatiladi
+  const secretKey = crypto.createHash('sha256').update(botToken).digest();
+  const calculatedHash = crypto
+    .createHmac('sha256', secretKey)
+    .update(dataCheckString)
+    .digest('hex');
 
-Har bir mahsulot sahifasida "Do'stga yuborish" tugmasi bo'ladi.
-* **Havola formati:** `t.me/my_shop_bot/app?startapp=prod_123`
-* **Qat'iy Telegram Parametr Qoidalari:** Telegram rasmiy hujjatlariga ko'ra `startapp` parametri **faqat lotin harflari, raqamlar va pastki chiziqdan (`^[a-zA-Z0-9_]{1,64}$`)** va maksimal 64 belgi bo'lishi shart.
-* **Ishlash mantiqi:** Xaridor havolani yuboradi -> Telegram Mini App ochiladi -> SDK `start_param = prod_123` ekanligini o'qiydi -> Mini App `#123` mahsulot sahifasini ochib beradi.
+  if (calculatedHash !== hash) return { isValid: false };
 
----
+  // auth_date yangiligini tekshirish
+  const authDate = parseInt(data.auth_date, 10);
+  const now = Math.floor(Date.now() / 1000);
+  if (now - authDate > maxAgeSeconds) return { isValid: false };
 
-## 6. Telegram Bot API Xabarnomalari (Notification Lifecycles)
-
-### 🔹 Admin Xabarnomasi (Yangi buyurtma va Geolokatsiya):
-```text
-🛍️ YANGI BUYURTMA #10045!
-
-👤 Xaridor: Alisher Zokirov (@alisher)
-📞 Telefon: +998 90 123 45 67
-💵 Summa: 340 000 so'm
-💳 To'lov: Click (PAID ✅)
-📍 Manzil: Toshkent sh., Chilonzor 1-mavze
-🗺️ Xarita: https://maps.google.com/?q=41.2995,69.2401
+  return { isValid: true, user: { id: Number(data.id), ... } };
+}
 ```
 
-### 🔹 Mijoz Xabarnomasi (Buyurtma statusi o'zgarganda):
-* **DELIVERING (Kuryerga berildi):**  
-  `🚚 Buyurtmangiz #10045 kuryerga topshirildi! Tez orada yetkazib beriladi.`
-* **COMPLETED (Topshirildi):**  
-  `🎉 Buyurtmangiz #10045 muvaffaqiyatli topshirildi! Xaridingiz uchun rahmat.`
-* **CANCELLED (Bekor qilindi):**  
-  `❌ Buyurtmangiz #10045 bekor qilindi.`
+### 3.3. TMA va Web Autentifikatsiya Farqi
+
+| Xususiyat | TMA (Telegram Ichida) | Web Brauzer |
+|-----------|----------------------|-------------|
+| **Imzo kaliti** | `HMAC-SHA256("WebAppData", botToken)` | `SHA256(botToken)` |
+| **Sessiya muddati** | 2 soat (7200 sec) | 24 soat (86400 sec) |
+| **Foydalanuvchi harakati** | Avtomatik (0 klik) | 1 klik (Telegram bot orqali) |
+| **Token saqlash** | Xotirada (state) | `localStorage` (`web_tg_user`, `web_tg_token`) |
+| **API endpoint** | `POST /api/auth` | `POST /api/auth/web` |
+
+---
+
+## 4. Telegram Contact Sharing (`requestContact`)
+
+Xaridor telefon raqamini qo'lda yozib o'tirmasligi uchun Telegram dan 1-klikda tasdiqlangan raqam olinadi:
+
+1. **Telegram muhitida:** Checkout sahifasida `[ 📱 Telegram raqamimni ulashish ]` tugmasi ko'rinadi.
+2. Tugma bosilganda Telegram native `requestContact()` dialog oynasi ochiladi.
+3. Xaridor tasdiqlagach, tasdiqlangan telefon raqami buyurtma formasiga tushadi va profilga saqlanadi.
+4. **Web Brauzer / Rad Etish Fallback:** Agar foydalanuvchi brauzerda bo'lsa yoki Telegram dialogini rad etsa, avtomatik ravishda qo'lda telefon kiritish maydoni ochiladi (`+998 (XX) XXX-XX-XX`). Hech qanday xatolik yuz bermaydi.
+
+---
+
+## 5. Deep Linking va Mahsulot Ulashish
+
+Har bir mahsulot sahifasida "Do'stga yuborish" tugmasi mavjud:
+
+### Havola Formati:
+```
+t.me/{BOT_USERNAME}/app?startapp=prod_123
+```
+
+### Telegram Qoidalariga Mos Validatsiya:
+Telegram rasmiy hujjatlariga ko'ra `startapp` parametri qat'iy qoida bo'yicha:
+- Faqat **lotin harflari, raqamlar va pastki chiziq** (`^[a-zA-Z0-9_]{1,64}$`).
+- Maksimal **64 belgi**.
+
+### Qo'llab-Quvvatlanadigan Deep Link Turlari:
+
+| Prefiks | Turi | Misol | Natija |
+|---------|------|-------|--------|
+| `prod_` | Mahsulot | `prod_123` | `/product/123` sahifasi ochiladi |
+| `cat_` | Toifa | `cat_45` | `/catalog` sahifasi o'sha toifa bilan ochiladi |
+| `ref_` | Tavsiya (Referral) | `ref_998` | Tavsiya egasini aniqlash |
+
+### Ishlash Mantiqi:
+```
+Xaridor havolani Telegramga yuboradi
+    → Do'st uni bosadi
+    → Telegram Mini App ochiladi
+    → SDK start_param = "prod_123" ekanligini o'qiydi
+    → validateAndParseStartAppParam("prod_123") → type: "product", id: "123"
+    → Ilova /product/123 sahifasini ochadi
+```
+
+---
+
+## 6. Telegram Bot API Xabarnomalari
+
+Bot orqali admin va xaridorga 3 xil avtomatik xabar yuboriladi:
+
+### 6.1. Admin Xabarnomasi (Yangi Buyurtma)
+Yangi buyurtma kelib tushganda admin guruh/kanalga xabar boradi:
+
+```
+🛒 YANGI BUYURTMA QABUL QILINDI!
+
+📦 Raqami: #10045
+👤 Mijoz: [Xaridor ismi]
+📞 Tel: +998 90 123 45 67
+💰 Summa: 340 000 UZS
+```
+
+### 6.2. Xaridor Xabarnomasi (Buyurtma Holati O'zgarishi)
+Buyurtma holati yangilanganda xaridorning shaxsiy Telegramiga 3 tildan birida xabar boradi:
+
+| Holat | UZ | RU | EN |
+|-------|----|----|----|
+| `NEW` | ⏳ Qabul qilindi | ⏳ Принят | ⏳ Accepted |
+| `PROCESSING` | 📦 Tayyorlanmoqda | 📦 В обработке | 📦 Processing |
+| `DELIVERING` | 🚴 Kuryer yo'lda | 🚴 Курьер в пути | 🚴 Out for delivery |
+| `COMPLETED` | ✅ Muvaffaqiyatli yetkazildi | ✅ Доставлено | ✅ Delivered |
+| `CANCELLED` | ❌ Bekor qilindi | ❌ Отменен | ❌ Cancelled |
+
+### 6.3. Elektron To'lov Kvitansiyasi (Receipt)
+To'lov muvaffaqiyatli bo'lganda xaridorga rasmiy elektron chek yuboriladi:
+
+```
+🧾 TO'LOV CHEKI (ELEKTRON KVITANSIYA)
+
+✅ To'lov muvaffaqiyatli qabul qilindi!
+
+📦 Buyurtma: #10045
+💳 To'lov turi: Click
+💰 Jami to'landi: 340 000 UZS
+
+Xarid qilingan mahsulotlar:
+1. [Mahsulot nomi] (2 x 120 000 UZS)
+2. [Mahsulot nomi] (1 x 100 000 UZS)
+
+Buyurtmangiz tayyorlanmoqda. Tez orada kuryer siz bilan bog'lanadi!
+```
+
+---
+
+## 7. Telegram Mini App SDK Moslik Jadvali
+
+Platforma quyidagi Telegram versiyalarida ishlaydi:
+
+| Funksiya | Minimal Telegram Versiyasi |
+|----------|---------------------------|
+| Mini App ochish | Bot API 6.1+ |
+| `initData` HMAC Auth | Bot API 6.1+ |
+| HapticFeedback | Bot API 6.1+ |
+| BackButton | Bot API 6.1+ |
+| CloudStorage | Bot API 6.9+ |
+| ClosingConfirmation | Bot API 6.2+ |
+| requestContact | Bot API 6.9+ |
+| Web Login Widget | Bot API 5.0+ |
