@@ -126,19 +126,15 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
           let topInset = tg.contentSafeAreaInset?.top ?? tg.safeAreaInset?.top ?? 0;
           let bottomInset = tg.contentSafeAreaInset?.bottom ?? tg.safeAreaInset?.bottom ?? 0;
 
-          // If Telegram SDK doesn't provide safe area (e.g. older clients),
-          // use CSS env() heuristic to detect floating header mode.
-          if (topInset === 0 && typeof document !== 'undefined') {
-            const div = document.createElement('div');
-            div.style.paddingTop = 'env(safe-area-inset-top)';
-            document.body.appendChild(div);
-            const envTop = parseInt(window.getComputedStyle(div).paddingTop) || 0;
-            document.body.removeChild(div);
-
-            if (envTop > 0) {
-              // Webview is behind status bar -> floating header mode.
-              // Add status bar height + Telegram floating header height (~44px)
-              topInset = envTop + 44;
+          // If Telegram SDK doesn't provide safe area (e.g. older Android clients),
+          // check if the webview is in fullscreen (floating header) mode by comparing heights.
+          if (topInset === 0 && typeof window !== 'undefined') {
+            // In Fullscreen mode (floating header), innerHeight is almost equal to screen.height
+            // In Bottom Sheet mode (gray header), innerHeight is much smaller (status bar + header)
+            const diff = Math.abs(window.screen.height - window.innerHeight);
+            if (diff < 60) {
+              // It's in Fullscreen mode. Add generous padding for the floating "X Yopish" button.
+              topInset = 65; 
             }
           }
 
