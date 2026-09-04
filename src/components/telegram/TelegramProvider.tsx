@@ -123,8 +123,25 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
           }
 
           // Force inject safe area padding if inside Telegram
-          const topInset = tg.contentSafeAreaInset?.top ?? tg.safeAreaInset?.top ?? 0;
-          const bottomInset = tg.contentSafeAreaInset?.bottom ?? tg.safeAreaInset?.bottom ?? 0;
+          let topInset = tg.contentSafeAreaInset?.top ?? tg.safeAreaInset?.top ?? 0;
+          let bottomInset = tg.contentSafeAreaInset?.bottom ?? tg.safeAreaInset?.bottom ?? 0;
+
+          // If Telegram SDK doesn't provide safe area (e.g. older clients),
+          // use CSS env() heuristic to detect floating header mode.
+          if (topInset === 0 && typeof document !== 'undefined') {
+            const div = document.createElement('div');
+            div.style.paddingTop = 'env(safe-area-inset-top)';
+            document.body.appendChild(div);
+            const envTop = parseInt(window.getComputedStyle(div).paddingTop) || 0;
+            document.body.removeChild(div);
+
+            if (envTop > 0) {
+              // Webview is behind status bar -> floating header mode.
+              // Add status bar height + Telegram floating header height (~44px)
+              topInset = envTop + 44;
+            }
+          }
+
           document.documentElement.style.setProperty('--tg-safe-area-inset-top', `${topInset}px`);
           document.documentElement.style.setProperty('--tg-safe-area-inset-bottom', `${bottomInset}px`);
         } catch (err) {
