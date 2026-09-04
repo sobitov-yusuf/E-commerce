@@ -134,7 +134,7 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
             const diff = Math.abs(window.screen.height - window.innerHeight);
             if (diff < 60) {
               // It's in Fullscreen mode. Add generous padding for the floating "X Yopish" button.
-              topInset = 65; 
+              topInset = 100; 
             }
           }
 
