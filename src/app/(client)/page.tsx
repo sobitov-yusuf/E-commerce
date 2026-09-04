@@ -11,38 +11,7 @@ import { ProductCard } from '@/components/home/ProductCard';
 import { CategoryCarousel } from '@/components/home/CategoryCarousel';
 import { StoriesReel } from '@/components/home/StoriesReel';
 
-const DEMO_STORIES = [
-  {
-    id: 1,
-    title: { uz: 'Yangi kelganlar', ru: 'Новинки', en: 'New Arrivals' },
-    subtitle: '',
-    tag: { uz: '24 soat', ru: '24 часа', en: '24 hours' },
-    image: 'https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=200',
-    bgColor: '#111827',
-    linkText: '',
-    linkUrl: '',
-  },
-  {
-    id: 2,
-    title: { uz: 'Chegirmalar', ru: 'Скидки', en: 'Sales' },
-    subtitle: '',
-    tag: { uz: 'Tugamoqda', ru: 'Заканчивается', en: 'Ending soon' },
-    image: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=200',
-    bgColor: '#ef4444',
-    linkText: '',
-    linkUrl: '',
-  },
-  {
-    id: 3,
-    title: { uz: 'Ommabop', ru: 'Популярное', en: 'Trending' },
-    subtitle: '',
-    tag: { uz: 'TOP', ru: 'ТОП', en: 'TOP' },
-    image: 'https://images.unsplash.com/photo-1460353581641-37baddab0fa2?w=200',
-    bgColor: '#3b82f6',
-    linkText: '',
-    linkUrl: '',
-  },
-];
+
 
 export default function HomePage() {
   const { lang } = useLanguageStore();
@@ -104,16 +73,7 @@ export default function HomePage() {
         </Link>
       </div>
 
-      {/* 1. STORIES REEL */}
-      <StoriesReel 
-        stories={DEMO_STORIES} 
-        onSelectStory={(story) => setActiveStory(story)}
-        triggerHaptic={() => {
-          if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.HapticFeedback) {
-            (window as any).Telegram.WebApp.HapticFeedback.impactOccurred('light');
-          }
-        }}
-      />
+      {/* Stories will be added here later if fetched from API */}
 
       {/* 2. HERO BANNER CAROUSEL */}
       {activeBanners.length > 0 && (
@@ -281,4 +241,5 @@ export default function HomePage() {
     </div>
   );
 }
+
 
