@@ -123,8 +123,8 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
           }
 
           // Force inject safe area padding if inside Telegram
-          const topInset = tg.contentSafeAreaInset?.top || tg.safeAreaInset?.top || 54;
-          const bottomInset = tg.contentSafeAreaInset?.bottom || tg.safeAreaInset?.bottom || 34;
+          const topInset = tg.contentSafeAreaInset?.top ?? tg.safeAreaInset?.top ?? 0;
+          const bottomInset = tg.contentSafeAreaInset?.bottom ?? tg.safeAreaInset?.bottom ?? 0;
           document.documentElement.style.setProperty('--tg-safe-area-inset-top', `${topInset}px`);
           document.documentElement.style.setProperty('--tg-safe-area-inset-bottom', `${bottomInset}px`);
         } catch (err) {
