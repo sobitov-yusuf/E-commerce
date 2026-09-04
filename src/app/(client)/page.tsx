@@ -67,7 +67,7 @@ export default function HomePage() {
               <Search className="w-5 h-5" />
             </div>
             <div className="flex-1 text-sm font-medium text-gray-500">
-              {lang === 'uz' ? 'Mahsulotlarni qidirish...' : lang === 'ru' ? '����� �������...' : 'Search products...'}
+              {lang === 'uz' ? 'Mahsulotlarni qidirish...' : lang === 'ru' ? 'Поиск товаров...' : 'Search products...'}
             </div>
           </div>
         </Link>

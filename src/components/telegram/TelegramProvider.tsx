@@ -107,9 +107,8 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
       useThemeStore.getState().initializeTheme();
 
       // Check if running inside Telegram Mini App
-      const hasTgWebApp =
-        typeof window !== 'undefined' &&
-        Boolean((window as any).Telegram?.WebApp?.initData);
+      const tg = typeof window !== 'undefined' ? (window as any).Telegram?.WebApp : null;
+      const hasTgWebApp = Boolean(tg && (tg.platform !== 'unknown' || tg.initData));
 
       if (hasTgWebApp) {
         const tg = (window as any).Telegram.WebApp;
@@ -122,6 +121,12 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
           if (typeof tg.enableClosingConfirmation === 'function') {
             tg.enableClosingConfirmation();
           }
+
+          // Force inject safe area padding if inside Telegram
+          const topInset = tg.contentSafeAreaInset?.top || tg.safeAreaInset?.top || 54;
+          const bottomInset = tg.contentSafeAreaInset?.bottom || tg.safeAreaInset?.bottom || 34;
+          document.documentElement.style.setProperty('--tg-safe-area-inset-top', `${topInset}px`);
+          document.documentElement.style.setProperty('--tg-safe-area-inset-bottom', `${bottomInset}px`);
         } catch (err) {
           console.warn('Telegram WebApp setup error:', err);
         }
