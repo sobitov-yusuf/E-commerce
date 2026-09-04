@@ -28,7 +28,7 @@ export default function SearchPage() {
   }, [products, searchQuery, lang]);
 
   return (
-    <div className="space-y-4 sm:space-y-6 pb-16 max-w-4xl mx-auto">
+    <div className="space-y-4 sm:space-y-6 pb-16 max-w-4xl mx-auto pt-safe px-4">
       {/* Search Bar */}
       <div className="flex items-center gap-2">
         <Link

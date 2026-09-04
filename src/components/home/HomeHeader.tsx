@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React from 'react';
 import Link from 'next/link';
@@ -13,7 +13,7 @@ export function HomeHeader() {
   const { lang, setLanguage } = useLanguageStore();
 
   return (
-    <header className="sticky top-0 z-40 bg-white/90 dark:bg-[#0B0F17]/90 backdrop-blur-md border-b border-gray-200/80 dark:border-white/10 transition-colors">
+    <header className="sticky top-0 z-40 bg-white/90 dark:bg-[#0B0F17]/90 backdrop-blur-md border-b border-gray-200/80 dark:border-white/10 transition-colors pt-safe">
       <div className="max-w-7xl mx-auto px-4 h-14 sm:h-16 flex items-center justify-between">
         {/* Brand Logo & Name */}
         <Link href="/" className="flex items-center gap-2 group shrink-0">

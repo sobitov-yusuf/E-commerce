@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
@@ -115,7 +115,7 @@ export default function HomePage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-200/80 dark:border-white/10 pb-3">
           <div className="flex items-center gap-2">
             <h3 className="text-base sm:text-lg font-black text-gray-950 dark:text-white tracking-tight">
-              {lang === 'uz' ? 'Tavsiya etiladigan mahsulotlar' : lang === 'ru' ? 'Рекомендуемые товары' : 'Recommended Products'}
+              {lang === 'uz' ? 'Mahsulotlar' : lang === 'ru' ? 'Товары' : 'Products'}
             </h3>
             <span className="text-xs font-bold text-gray-400">({filteredProducts.length})</span>
           </div>
