@@ -1,118 +1,123 @@
-// Universal Telegram Mini App (TMA) E-Commerce — Database Seed Script
-// Populates initial Store Settings, Demo Categories, Products with SKU Variants, Promocodes, and Admin User
-
 import { PrismaClient } from '@prisma/client';
-
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Starting Database Seeding...');
+  console.log('Seeding Database with Mock Data...');
 
-  // 1. Initial Store Settings
-  const storeSetting = await prisma.storeSetting.upsert({
-    where: { id: 1 },
-    update: {},
-    create: {
-      store_name: { uz: 'Premium Cosmetics Store', ru: 'Премиум Косметика', en: 'Premium Cosmetics' },
-      delivery_fee: 15000,
-      free_delivery_threshold: 300000,
-      terms_url: 'https://mydomain.com/terms',
-    },
-  });
-  console.log('✅ Store Settings created:', storeSetting.id);
+  // 1. Clear existing data
+  await prisma.productVariant.deleteMany();
+  await prisma.product.deleteMany();
+  await prisma.category.deleteMany();
+  await prisma.banner.deleteMany();
 
-  // 2. Initial Categories
-  const category1 = await prisma.category.upsert({
-    where: { slug: 'terini-parvarish-qilish' },
-    update: {},
-    create: {
-      name: { uz: 'Terini Parvarish Qilish', ru: 'Уход за кожей', en: 'Skin Care' },
-      slug: 'terini-parvarish-qilish',
-      is_active: true,
-    },
-  });
+  console.log('Cleared existing data.');
 
-  const category2 = await prisma.category.upsert({
-    where: { slug: 'parfyumeriya' },
-    update: {},
-    create: {
-      name: { uz: 'Parfyumeriya', ru: 'Парфюмерия', en: 'Perfumes' },
-      slug: 'parfyumeriya',
-      is_active: true,
-    },
-  });
-
-  console.log('✅ Categories created:', category1.slug, category2.slug);
-
-  // 3. Initial Products & SKU Variants
-  const product1 = await prisma.product.create({
+  // 2. Create Categories
+  const catElectronics = await prisma.category.create({
     data: {
-      category_id: category1.id,
-      name: { uz: 'Gidratatsiyalovchi Yuz Kremi', ru: 'Увлажняющий крем для лица', en: 'Hydrating Face Cream' },
-      description: {
-        uz: 'Tabiiy moddalar va hialuron kislotasi bilan boyitilgan yuqori sifatli yuz kremi.',
-        ru: 'Высококачественный крем для лица с гиалуроновой кислотой.',
-        en: 'High quality face cream enriched with hyaluronic acid.',
-      },
-      base_price: 180000,
-      old_price: 220000,
+      name: { uz: 'Elektronika', ru: 'Электроника', en: 'Electronics' },
+      slug: 'electronics',
+      image_url: 'https://images.unsplash.com/photo-1498049794561-7780e7231661?w=200',
+    }
+  });
+
+  const catClothes = await prisma.category.create({
+    data: {
+      name: { uz: 'Kiyimlar', ru: 'Одежда', en: 'Clothes' },
+      slug: 'clothes',
+      image_url: 'https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=200',
+    }
+  });
+
+  const catAccessories = await prisma.category.create({
+    data: {
+      name: { uz: 'Aksessuarlar', ru: 'Аксессуары', en: 'Accessories' },
+      slug: 'accessories',
+      image_url: 'https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=200',
+    }
+  });
+
+  console.log('Categories created.');
+
+  // 3. Create Products
+  const prod1 = await prisma.product.create({
+    data: {
+      category_id: catElectronics.id,
+      name: { uz: 'iPhone 15 Pro Max', ru: 'iPhone 15 Pro Max', en: 'iPhone 15 Pro Max' },
+      description: { uz: 'Yangi avlod', ru: 'Новое поколение', en: 'Next gen' },
+      base_price: 15000000,
       badge: 'TOP',
-      images: ['https://images.unsplash.com/photo-1556228720-195a672e8a03?w=500'],
-      is_active: true,
+      images: ['https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=500'],
       variants: {
         create: [
-          { sku: 'CREAM-50ML', size: '50ml', stock_count: 25, price: 180000 },
-          { sku: 'CREAM-100ML', size: '100ml', stock_count: 15, price: 290000 },
-        ],
-      },
-    },
+          { size: '256GB', color: 'Natural Titanium', price: 15000000, stock_count: 50 },
+          { size: '512GB', color: 'Blue Titanium', price: 17000000, stock_count: 20 },
+        ]
+      }
+    }
   });
 
-  const product2 = await prisma.product.create({
+  const prod2 = await prisma.product.create({
     data: {
-      category_id: category2.id,
-      name: { uz: 'French Rose Parfyumi', ru: 'Парфюм Французская Роза', en: 'French Rose Perfume' },
-      description: {
-        uz: 'Fransiya atirgulining nafis va uzoq saqlanuvchi ifori.',
-        ru: 'Утонченный аромат французской розы.',
-        en: 'Exquisite and long-lasting scent of French rose.',
-      },
-      base_price: 450000,
-      old_price: 520000,
-      badge: 'NEW',
-      images: ['https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?w=500'],
-      is_active: true,
+      category_id: catElectronics.id,
+      name: { uz: 'AirPods Pro 2', ru: 'AirPods Pro 2', en: 'AirPods Pro 2' },
+      description: { uz: 'Faol shovqinni pasaytirish', ru: 'Активное шумоподавление', en: 'Active noise cancellation' },
+      base_price: 3200000,
+      old_price: 3500000,
+      badge: 'SALE',
+      images: ['https://images.unsplash.com/photo-1600294037681-c80b4cb5b434?w=500'],
       variants: {
         create: [
-          { sku: 'PERFUME-100ML', size: '100ml', stock_count: 10, price: 450000 },
-        ],
-      },
-    },
+          { size: 'Standard', color: 'White', price: 3200000, stock_count: 100 },
+        ]
+      }
+    }
   });
 
-  console.log('✅ Products created:', product1.id, product2.id);
-
-  // 4. Initial Promocodes
-  const promo = await prisma.promocode.upsert({
-    where: { code: 'PROMO2026' },
-    update: {},
-    create: {
-      code: 'PROMO2026',
-      discount_type: 'PERCENT',
-      discount_value: 10,
-      min_order_amount: 100000,
-      max_uses: 100,
-      is_active: true,
-    },
+  const prod3 = await prisma.product.create({
+    data: {
+      category_id: catClothes.id,
+      name: { uz: 'Premium Hoodie', ru: 'Премиум Худи', en: 'Premium Hoodie' },
+      description: { uz: '100% paxta', ru: '100% хлопок', en: '100% cotton' },
+      base_price: 450000,
+      badge: 'NEW',
+      images: ['https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=500'],
+      variants: {
+        create: [
+          { size: 'M', color: 'Black', price: 450000, stock_count: 10 },
+          { size: 'L', color: 'Black', price: 450000, stock_count: 5 },
+          { size: 'XL', color: 'Grey', price: 450000, stock_count: 0 },
+        ]
+      }
+    }
   });
-  console.log('✅ Promocode created:', promo.code);
 
-  console.log('🎉 Seeding completed successfully!');
+  console.log('Products created.');
+
+  // 4. Create Banners
+  await prisma.banner.create({
+    data: {
+      title: { uz: 'Bahorgi Chegirmalar', ru: 'Весенние скидки', en: 'Spring Sale' },
+      image_url: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=800',
+      sort_order: 1
+    }
+  });
+
+  await prisma.banner.create({
+    data: {
+      title: { uz: 'Yangi To\'plam 2026', ru: 'Новая коллекция 2026', en: 'New Collection 2026' },
+      image_url: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=800',
+      sort_order: 2
+    }
+  });
+
+  console.log('Banners created.');
+  console.log('✅ DB Seeding completed successfully!');
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Seeding error:', e);
+    console.error(e);
     process.exit(1);
   })
   .finally(async () => {

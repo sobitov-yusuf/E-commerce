@@ -166,8 +166,20 @@ export async function POST(request: NextRequest) {
       console.warn('Database offline or unconfigured, proceeding with graceful local order creation:', dbErr);
     }
 
-    // Payment Checkout URL Generation (Internal Gateway or Test Gateway)
-    const paymentUrl = `/checkout/pay?order_id=${createdOrderId}&order_number=${encodeURIComponent(orderNumber)}&provider=${payment_type}&amount=${totalPrice}`;
+    // Payment Checkout URL Generation (Click & Payme Test Envs)
+    let paymentUrl = `/checkout/pay?order_id=${createdOrderId}&order_number=${encodeURIComponent(orderNumber)}&provider=${payment_type}&amount=${totalPrice}`;
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://telegram-mini-app-ecommerce.vercel.app';
+
+    if (payment_type === 'PAYME') {
+      const paymeMerchantId = process.env.PAYME_MERCHANT_ID || '64a1234567890abcdef12345';
+      const paymeAmount = totalPrice * 100; // Payme requires tiyins
+      const paymeParams = Buffer.from(`m=${paymeMerchantId};ac.order_id=${orderNumber};a=${paymeAmount}`).toString('base64');
+      paymentUrl = `https://test.paycom.uz/${paymeParams}`;
+    } else if (payment_type === 'CLICK') {
+      const clickServiceId = process.env.CLICK_SERVICE_ID || '12345';
+      const clickMerchantId = process.env.CLICK_MERCHANT_ID || '67890';
+      paymentUrl = `https://my.click.uz/services/pay?service_id=${clickServiceId}&merchant_id=${clickMerchantId}&amount=${totalPrice}&transaction_param=${orderNumber}&return_url=${baseUrl}/profile`;
+    }
 
     return apiSuccess({
       order_id: createdOrderId,
@@ -186,3 +198,4 @@ export async function POST(request: NextRequest) {
     return apiError('Checkout bajarishda xatolik yuz berdi: ' + error.message, 500);
   }
 }
+

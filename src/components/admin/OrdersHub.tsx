@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Package, 
   Search, 
@@ -50,7 +50,7 @@ function CustomDropdown({ label, options, value, onChange }: { label: string, op
 }
 
 export function OrdersHub(props: any) {
-  const { orders, updateOrderStatus } = useOrderStore();
+  const { orders, updateOrderStatus, fetchOrders, isLoading } = useOrderStore(); useEffect(() => { fetchOrders(); }, [fetchOrders]);
   const { restoreStock } = useProductStore();
   
   const [periodFilter, setPeriodFilter] = useState('ALL');

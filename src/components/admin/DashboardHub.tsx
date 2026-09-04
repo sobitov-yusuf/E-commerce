@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   TrendingUp, 
   TrendingDown,
@@ -17,7 +17,7 @@ import { useLanguageStore } from '@/store/useLanguageStore';
 
 export function DashboardHub(props: any) {
   const { lang } = useLanguageStore();
-  const { orders } = useOrderStore();
+  const { orders, fetchOrders } = useOrderStore(); useEffect(() => { fetchOrders(); }, [fetchOrders]);
   const [chartType, setChartType] = useState<'area' | 'bar'>('area');
 
   // Fake analytics data

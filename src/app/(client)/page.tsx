@@ -1,8 +1,8 @@
-﻿'use client';
+'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
-import { ShoppingBag, ArrowRight, ShieldCheck, Truck, RotateCcw, PackageSearch, MessageCircle } from 'lucide-react';
+import { ShoppingBag, ArrowRight, ShieldCheck, Truck, RotateCcw, PackageSearch, MessageCircle, Search } from 'lucide-react';
 import { useProductStore } from '@/store/useProductStore';
 import { useCategoryStore } from '@/store/useCategoryStore';
 import { useBannerStore } from '@/store/useBannerStore';
@@ -14,9 +14,9 @@ import { StoriesReel } from '@/components/home/StoriesReel';
 const DEMO_STORIES = [
   {
     id: 1,
-    title: { uz: 'Yangi kelganlar', ru: 'РќРѕРІРёРЅРєРё', en: 'New Arrivals' },
+    title: { uz: 'Yangi kelganlar', ru: 'Новинки', en: 'New Arrivals' },
     subtitle: '',
-    tag: { uz: '24 soat', ru: '24 С‡Р°СЃР°', en: '24 hours' },
+    tag: { uz: '24 soat', ru: '24 часа', en: '24 hours' },
     image: 'https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=200',
     bgColor: '#111827',
     linkText: '',
@@ -24,9 +24,9 @@ const DEMO_STORIES = [
   },
   {
     id: 2,
-    title: { uz: 'Chegirmalar', ru: 'РЎРєРёРґРєРё', en: 'Sales' },
+    title: { uz: 'Chegirmalar', ru: 'Скидки', en: 'Sales' },
     subtitle: '',
-    tag: { uz: 'Tugamoqda', ru: 'Р—Р°РєР°РЅС‡РёРІР°РµС‚СЃСЏ', en: 'Ending soon' },
+    tag: { uz: 'Tugamoqda', ru: 'Заканчивается', en: 'Ending soon' },
     image: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=200',
     bgColor: '#ef4444',
     linkText: '',
@@ -34,9 +34,9 @@ const DEMO_STORIES = [
   },
   {
     id: 3,
-    title: { uz: 'Ommabop', ru: 'РџРѕРїСѓР»СЏСЂРЅРѕРµ', en: 'Trending' },
+    title: { uz: 'Ommabop', ru: 'Популярное', en: 'Trending' },
     subtitle: '',
-    tag: { uz: 'TOP', ru: 'РўРћРџ', en: 'TOP' },
+    tag: { uz: 'TOP', ru: 'ТОП', en: 'TOP' },
     image: 'https://images.unsplash.com/photo-1460353581641-37baddab0fa2?w=200',
     bgColor: '#3b82f6',
     linkText: '',
@@ -90,6 +90,20 @@ export default function HomePage() {
   return (
     <div className="space-y-6 sm:space-y-8 pb-10">
       
+            {/* 0. LONG SEARCH BAR */}
+      <div className="px-0">
+        <Link href="/search" className="block w-full">
+          <div className="relative flex items-center w-full h-12 bg-white dark:bg-[#111827] border border-gray-200/80 dark:border-white/10 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+            <div className="pl-4 pr-3 text-gray-400">
+              <Search className="w-5 h-5" />
+            </div>
+            <div className="flex-1 text-sm font-medium text-gray-500">
+              {lang === 'uz' ? 'Mahsulotlarni qidirish...' : lang === 'ru' ? '����� �������...' : 'Search products...'}
+            </div>
+          </div>
+        </Link>
+      </div>
+
       {/* 1. STORIES REEL */}
       <StoriesReel 
         stories={DEMO_STORIES} 
@@ -141,7 +155,7 @@ export default function HomePage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-200/80 dark:border-white/10 pb-3">
           <div className="flex items-center gap-2">
             <h3 className="text-base sm:text-lg font-black text-gray-950 dark:text-white tracking-tight">
-              {lang === 'uz' ? 'Tavsiya etiladigan mahsulotlar' : lang === 'ru' ? 'Р РµРєРѕРјРµРЅРґСѓРµРјС‹Рµ С‚РѕРІР°СЂС‹' : 'Recommended Products'}
+              {lang === 'uz' ? 'Tavsiya etiladigan mahsulotlar' : lang === 'ru' ? 'Рекомендуемые товары' : 'Recommended Products'}
             </h3>
             <span className="text-xs font-bold text-gray-400">({filteredProducts.length})</span>
           </div>
@@ -158,10 +172,10 @@ export default function HomePage() {
                     : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-[#161F30]'
                 }`}
               >
-                {tab === 'all' && (lang === 'uz' ? 'Barchasi' : lang === 'ru' ? 'Р’СЃРµ' : 'All')}
-                {tab === 'popular' && (lang === 'uz' ? 'Mashhur' : lang === 'ru' ? 'РџРѕРїСѓР»СЏСЂРЅС‹Рµ' : 'Popular')}
-                {tab === 'new' && (lang === 'uz' ? 'Yangi' : lang === 'ru' ? 'РќРѕРІРёРЅРєРё' : 'New')}
-                {tab === 'sale' && (lang === 'uz' ? 'Chegirma' : lang === 'ru' ? 'РЎРєРёРґРєРё' : 'Sale')}
+                {tab === 'all' && (lang === 'uz' ? 'Barchasi' : lang === 'ru' ? 'Все' : 'All')}
+                {tab === 'popular' && (lang === 'uz' ? 'Mashhur' : lang === 'ru' ? 'Популярные' : 'Popular')}
+                {tab === 'new' && (lang === 'uz' ? 'Yangi' : lang === 'ru' ? 'Новинки' : 'New')}
+                {tab === 'sale' && (lang === 'uz' ? 'Chegirma' : lang === 'ru' ? 'Скидки' : 'Sale')}
               </button>
             ))}
           </div>
@@ -194,12 +208,12 @@ export default function HomePage() {
             </div>
             <div>
               <h4 className="text-sm font-bold text-gray-950 dark:text-white">
-                {lang === 'uz' ? 'Hozircha mahsulotlar mavjud emas' : lang === 'ru' ? 'РџРѕРєР° РЅРµС‚ С‚РѕРІР°СЂРѕРІ' : 'No products available yet'}
+                {lang === 'uz' ? 'Hozircha mahsulotlar mavjud emas' : lang === 'ru' ? 'Пока нет товаров' : 'No products available yet'}
               </h4>
               <p className="text-xs text-gray-400 max-w-sm mx-auto mt-1">
                 {lang === 'uz'
                   ? 'Admin panel orqali yangi tovarlar kiritilgach, bu yerda ko\'rinadi.'
-                  : lang === 'ru' ? 'РџРѕСЃР»Рµ РґРѕР±Р°РІР»РµРЅРёСЏ С‚РѕРІР°СЂРѕРІ РІ Р°РґРјРёРЅ-РїР°РЅРµР»Рё РѕРЅРё РїРѕСЏРІСЏС‚СЃСЏ Р·РґРµСЃСЊ.' : 'Products will appear here once added via admin panel.'}
+                  : lang === 'ru' ? 'После добавления товаров в админ-панели они появятся здесь.' : 'Products will appear here once added via admin panel.'}
               </p>
             </div>
           </div>
@@ -214,10 +228,10 @@ export default function HomePage() {
           </div>
           <div>
             <h4 className="text-sm font-bold text-gray-950 dark:text-white">
-              {lang === 'uz' ? 'Savollaringiz bormi?' : lang === 'ru' ? 'Р•СЃС‚СЊ РІРѕРїСЂРѕСЃС‹?' : 'Have any questions?'}
+              {lang === 'uz' ? 'Savollaringiz bormi?' : lang === 'ru' ? 'Есть вопросы?' : 'Have any questions?'}
             </h4>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-              {lang === 'uz' ? 'Bizning operatorlar sizga yordam berishga tayyor.' : lang === 'ru' ? 'РќР°С€Рё РѕРїРµСЂР°С‚РѕСЂС‹ РіРѕС‚РѕРІС‹ РїРѕРјРѕС‡СЊ РІР°Рј.' : 'Our operators are ready to help you.'}
+              {lang === 'uz' ? 'Bizning operatorlar sizga yordam berishga tayyor.' : lang === 'ru' ? 'Наши операторы готовы помочь вам.' : 'Our operators are ready to help you.'}
             </p>
           </div>
         </div>
@@ -227,7 +241,7 @@ export default function HomePage() {
           rel="noopener noreferrer"
           className="w-full sm:w-auto h-10 px-6 bg-blue-600 text-white rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 hover:bg-blue-700 active:scale-95 transition-all shadow-sm"
         >
-          <span>{lang === 'uz' ? 'Yozish' : lang === 'ru' ? 'РќР°РїРёСЃР°С‚СЊ' : 'Write'}</span>
+          <span>{lang === 'uz' ? 'Yozish' : lang === 'ru' ? 'Написать' : 'Write'}</span>
         </a>
       </div>
 
@@ -248,7 +262,7 @@ export default function HomePage() {
           </div>
           <div>
             <div className="text-[10px] sm:text-[11px] font-bold text-gray-900 dark:text-white">
-              {lang === 'uz' ? 'Tez Yetkazish' : lang === 'ru' ? 'Р‘С‹СЃС‚СЂР°СЏ РґРѕСЃС‚Р°РІРєР°' : 'Fast Delivery'}
+              {lang === 'uz' ? 'Tez Yetkazish' : lang === 'ru' ? 'Быстрая доставка' : 'Fast Delivery'}
             </div>
           </div>
         </div>
@@ -259,7 +273,7 @@ export default function HomePage() {
           </div>
           <div>
             <div className="text-[10px] sm:text-[11px] font-bold text-gray-900 dark:text-white">
-              {lang === 'uz' ? 'Oson Qaytarish' : lang === 'ru' ? 'Р›РµРіРєРёР№ РІРѕР·РІСЂР°С‚' : 'Easy Returns'}
+              {lang === 'uz' ? 'Oson Qaytarish' : lang === 'ru' ? 'Легкий возврат' : 'Easy Returns'}
             </div>
           </div>
         </div>
@@ -267,3 +281,4 @@ export default function HomePage() {
     </div>
   );
 }
+

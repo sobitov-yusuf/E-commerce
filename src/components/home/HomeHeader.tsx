@@ -58,17 +58,6 @@ export function HomeHeader() {
           </div>
         </Link>
 
-        {/* Quick Search Bar (Pill) */}
-        <Link
-          href="/search"
-          className="flex-1 max-w-xs sm:max-w-md h-9 sm:h-10 px-3 sm:px-4 bg-gray-100 dark:bg-[#161F30] rounded-xl flex items-center gap-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
-        >
-          <Search className="w-4 h-4 shrink-0" />
-          <span className="text-xs font-medium line-clamp-1">
-            {lang === 'uz' ? 'Qidirish...' : 'Поиск...'}
-          </span>
-        </Link>
-
         {/* Header Right Actions */}
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {/* Language Switcher */}
@@ -147,3 +136,4 @@ export function HomeHeader() {
     </header>
   );
 }
+

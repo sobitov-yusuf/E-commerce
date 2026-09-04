@@ -47,10 +47,34 @@ function CustomDropdown({ label, options, value, onChange }: { label: string, op
 }
 
 export function CatalogHub(props: any) {
-  const { products } = useProductStore();
+  const { products, addProduct } = useProductStore();
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [showProductModal, setShowProductModal] = useState(false);
+
+  // Form State
+  const [formNameUz, setFormNameUz] = useState('');
+  const [formNameRu, setFormNameRu] = useState('');
+  const [formCategoryId, setFormCategoryId] = useState('');
+  const [formPrice, setFormPrice] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSaveProduct = async () => {
+    if(!formNameUz || !formCategoryId || !formPrice) return;
+    setIsSaving(true);
+    const newProd = {
+        name: { uz: formNameUz, ru: formNameRu, en: formNameUz },
+        description: { uz: '', ru: '', en: '' },
+        category_id: Number(formCategoryId),
+        base_price: Number(formPrice),
+        images: ['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500'],
+        is_active: true
+    };
+    await addProduct(newProd);
+    setIsSaving(false);
+    setShowProductModal(false);
+    setFormNameUz(''); setFormNameRu(''); setFormCategoryId(''); setFormPrice('');
+  };
 
   // Stats Mini-HUD
   const totalStock = products.reduce((acc, p) => acc + (p.stock || 0), 0);
@@ -156,9 +180,7 @@ export function CatalogHub(props: any) {
                 <button className="h-9 px-4 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-xl flex items-center gap-1.5 text-xs font-bold transition-all hover:bg-purple-100 dark:hover:bg-purple-900/40">
                   <Sparkles className="w-4 h-4" /> Gemini AI Tarjima
                 </button>
-                <button className="h-9 px-6 bg-gray-900 dark:bg-white text-white dark:text-gray-950 rounded-xl font-bold text-xs transition-all shadow-sm">
-                  Saqlash
-                </button>
+                <button onClick={handleSaveProduct} disabled={isSaving} className="h-9 px-6 bg-gray-900 dark:bg-white text-white dark:text-gray-950 rounded-xl font-bold text-xs transition-all shadow-sm disabled:opacity-50">{isSaving ? "Saqlanmoqda..." : "Saqlash"}</button>
               </div>
             </div>
 
@@ -169,21 +191,21 @@ export function CatalogHub(props: any) {
                 <div className="space-y-4">
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-gray-500 uppercase">Nomi (UZ)</label>
-                    <input type="text" className="w-full h-11 px-4 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#161F30] outline-none text-sm font-bold text-gray-900 dark:text-white" />
+                    <input type="text" value={formNameUz} onChange={e => setFormNameUz(e.target.value)} className="w-full h-11 px-4 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#161F30] outline-none text-sm font-bold text-gray-900 dark:text-white" />
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-gray-500 uppercase">Nomi (RU)</label>
-                    <input type="text" className="w-full h-11 px-4 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#161F30]/50 outline-none text-sm font-bold text-gray-900 dark:text-white" />
+                    <input type="text" value={formNameRu} onChange={e => setFormNameRu(e.target.value)} className="w-full h-11 px-4 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#161F30]/50 outline-none text-sm font-bold text-gray-900 dark:text-white" />
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-gray-500 uppercase">Kategoriya</label>
                     <div className="w-full">
-                      <CustomDropdown label="Tanlang" options={cats.filter(c => c.id !== 'ALL')} value="" onChange={() => {}} />
+                      <CustomDropdown label="Tanlang" options={cats.filter(c => c.id !== 'ALL')} value={formCategoryId} onChange={setFormCategoryId} />
                     </div>
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-gray-500 uppercase">Asosiy Narx (UZS)</label>
-                    <input type="number" className="w-full h-11 px-4 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#161F30] outline-none text-sm font-black text-gray-900 dark:text-white" />
+                    <input type="number" value={formPrice} onChange={e => setFormPrice(e.target.value)} className="w-full h-11 px-4 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#161F30] outline-none text-sm font-black text-gray-900 dark:text-white" />
                   </div>
                 </div>
 
@@ -253,3 +275,4 @@ export function CatalogHub(props: any) {
     </div>
   );
 }
+
