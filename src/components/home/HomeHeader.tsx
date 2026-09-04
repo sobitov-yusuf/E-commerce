@@ -1,14 +1,16 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import Link from 'next/link';
 import { Sun, Moon } from 'lucide-react';
 import { useThemeStore } from '@/store/useThemeStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
+import { useLanguageStore } from '@/store/useLanguageStore';
 
 export function HomeHeader() {
   const { isDark, toggleTheme } = useThemeStore();
   const { storeName = 'LUXE BOUTIQUE' } = useSettingsStore();
+  const { lang, setLanguage } = useLanguageStore();
 
   return (
     <header className="sticky top-0 z-40 bg-white/90 dark:bg-[#0B0F17]/90 backdrop-blur-md border-b border-gray-200/80 dark:border-white/10 transition-colors">
@@ -25,14 +27,27 @@ export function HomeHeader() {
           </div>
         </Link>
 
-        {/* Theme Toggle Only */}
-        <button
-          type="button"
-          onClick={toggleTheme}
-          className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#161F30] transition-colors"
-        >
-          {isDark ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5" />}
-        </button>
+        {/* Controls */}
+        <div className="flex items-center">
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#161F30] transition-colors"
+          >
+            {isDark ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5" />}
+          </button>
+
+          {/* Language Selector */}
+          <select
+            value={lang}
+            onChange={(e) => setLanguage(e.target.value as any)}
+            className="ml-2 p-1 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-transparent text-gray-800 dark:text-gray-200 focus:outline-none"
+          >
+            <option value="uz">🇺🇿 UZ</option>
+            <option value="ru">🇷🇺 RU</option>
+            <option value="en">🇬🇧 EN</option>
+          </select>
+        </div>
       </div>
     </header>
   );

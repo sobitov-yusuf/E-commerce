@@ -1,4 +1,4 @@
-'use client';
+п»ї'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
@@ -67,7 +67,7 @@ export default function HomePage() {
               <Search className="w-5 h-5" />
             </div>
             <div className="flex-1 text-sm font-medium text-gray-500">
-              {lang === 'uz' ? 'Mahsulotlarni qidirish...' : lang === 'ru' ? 'Поиск товаров...' : 'Search products...'}
+              {lang === 'uz' ? 'Mahsulotlarni qidirish...' : lang === 'ru' ? 'пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ...' : 'Search products...'}
             </div>
           </div>
         </Link>
